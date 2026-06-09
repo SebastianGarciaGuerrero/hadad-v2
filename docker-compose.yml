@@ -1,0 +1,49 @@
+# ============================================================
+# Hadad 2.0 — Configuración Docker para desarrollo local
+# ============================================================
+# Levanta PostgreSQL 16 en puerto 5433 (para no chocar con
+# el PostgreSQL que ya tienes instalado en Windows en 5432).
+#
+# Comandos útiles:
+#   Levantar:   docker compose up -d
+#   Ver logs:   docker compose logs -f postgres
+#   Detener:    docker compose down
+#   Reset:      docker compose down -v   (¡borra los datos!)
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hadad-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Configurar zona horaria de Chile
+      TZ: America/Santiago
+      PGTZ: America/Santiago
+
+    ports:
+      # Formato: "puerto_externo:puerto_interno"
+      # Conectarse desde DBeaver al 5433
+      - "5433:5432"
+
+    volumes:
+      # Persistencia de datos: aunque borres el container, los datos quedan
+      - hadad_data:/var/lib/postgresql/data
+
+      # Auto-ejecutar el DDL en la primera creación de la DB
+      # PostgreSQL corre todos los .sql de esta carpeta alfabéticamente
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hadad_data:
+    name: hadad_v2_data

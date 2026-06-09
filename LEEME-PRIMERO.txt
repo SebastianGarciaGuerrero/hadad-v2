@@ -1,0 +1,41 @@
+========================================
+  HADAD 2.0 - Setup local de desarrollo
+========================================
+
+PASOS RAPIDOS:
+
+1. Asegurate que Docker Desktop este abierto
+   (icono de ballena verde en la barra de tareas)
+
+2. Doble click en: iniciar.bat
+   (la primera vez tarda 2-3 minutos descargando PostgreSQL)
+
+3. Instala DBeaver desde:
+   https://dbeaver.io/download/
+
+4. En DBeaver, crea una conexion PostgreSQL con:
+   Host:     localhost
+   Port:     5433
+   Database: hadad_v2
+   User:     hadad_admin
+   Password: desarrollo_local_2026
+
+
+ARCHIVOS .BAT (doble click):
+
+  iniciar.bat        Levanta PostgreSQL
+  detener.bat        Detiene PostgreSQL (datos se conservan)
+  verificar.bat      Muestra estado y logs
+  consola-sql.bat    Abre consola SQL directa
+  reset-total.bat    Borra todo y recrea (CUIDADO)
+
+
+QUE HACER SI ALGO FALLA:
+
+  1. Verifica que Docker Desktop este corriendo
+  2. Ejecuta verificar.bat para ver el estado y logs
+  3. Si algo se rompio: ejecuta reset-total.bat
+
+
+Documentacion completa: README.md
+Esquema de base de datos: database\init\001_schema.sql
