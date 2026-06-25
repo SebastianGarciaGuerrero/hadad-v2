@@ -10,6 +10,8 @@ from app.database import get_db
 from app.config import settings
 from app.routers import clientes
 from app.routers import filiales
+from app.routers import deudores
+from app.routers import cobranzas
 
 
 app = FastAPI(
@@ -22,6 +24,8 @@ app = FastAPI(
 # Registrar routers (módulos de endpoints)
 app.include_router(clientes.router)
 app.include_router(filiales.router)
+app.include_router(deudores.router)
+app.include_router(cobranzas.router)
 
 
 @app.get("/")

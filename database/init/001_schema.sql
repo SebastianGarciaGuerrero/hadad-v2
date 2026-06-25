@@ -213,9 +213,11 @@ CREATE TABLE cobranzas (
     id                       UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     numero                   INTEGER       NOT NULL UNIQUE
                                  GENERATED ALWAYS AS IDENTITY
-                                 (START WITH 1 INCREMENT BY 1),
+                                 (START WITH 20000 INCREMENT BY 1),
     -- numero usa IDENTITY (PostgreSQL 10+): se genera automáticamente,
     -- NO se puede insertar un valor manual. Garantiza unicidad absoluta.
+    -- Arranca en 20000: el sistema legacy maneja N° desde 10000 y va por
+    -- los 14000, así que 20000 deja margen para no chocar con esos rangos.
 
     -- Vínculos principales
     cliente_id               UUID          NOT NULL REFERENCES clientes(id),
