@@ -12,6 +12,7 @@ from app.routers import clientes
 from app.routers import filiales
 from app.routers import deudores
 from app.routers import cobranzas
+from app.routers import gestiones
 
 
 app = FastAPI(
@@ -26,6 +27,7 @@ app.include_router(clientes.router)
 app.include_router(filiales.router)
 app.include_router(deudores.router)
 app.include_router(cobranzas.router)
+app.include_router(gestiones.router)
 
 
 @app.get("/")
