@@ -8,11 +8,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
 from app.config import settings
+# Modelos sin router propio todavía: se importan para registrar sus tablas en
+# el metadata de SQLAlchemy, necesario para resolver las FK que apuntan a ellas
+# (cobranzas.ejecutivo_id/paciente_id, gestiones/acuerdos.usuario_id).
+from app.models import rol, usuario, paciente  # noqa: F401
+
 from app.routers import clientes
 from app.routers import filiales
 from app.routers import deudores
 from app.routers import cobranzas
 from app.routers import gestiones
+from app.routers import acuerdos
 
 
 app = FastAPI(
@@ -28,6 +34,7 @@ app.include_router(filiales.router)
 app.include_router(deudores.router)
 app.include_router(cobranzas.router)
 app.include_router(gestiones.router)
+app.include_router(acuerdos.router)
 
 
 @app.get("/")
