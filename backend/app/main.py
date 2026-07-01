@@ -19,6 +19,7 @@ from app.routers import deudores
 from app.routers import cobranzas
 from app.routers import gestiones
 from app.routers import acuerdos
+from app.routers import pagos
 
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.include_router(deudores.router)
 app.include_router(cobranzas.router)
 app.include_router(gestiones.router)
 app.include_router(acuerdos.router)
+app.include_router(pagos.router)
 
 
 @app.get("/")
