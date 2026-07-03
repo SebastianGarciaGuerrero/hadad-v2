@@ -18,14 +18,17 @@ from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.models.cliente import Cliente
 from app.schemas.cliente import ClienteCreate, ClienteUpdate, ClienteResponse
+from app.security import get_current_user
 
 
 # Router agrupa endpoints relacionados.
 # prefix="/api/clientes" se agrega a todas las rutas de este router.
 # tags=["Clientes"] agrupa los endpoints en la documentación /docs
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/clientes",
-    tags=["Clientes"]
+    tags=["Clientes"],
+    dependencies=[Depends(get_current_user)],
 )
 
 

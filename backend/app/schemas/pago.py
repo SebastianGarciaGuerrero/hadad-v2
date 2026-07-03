@@ -23,9 +23,11 @@ EstadoPago = Literal["pagado", "abono", "cuota", "bonificacion"]
 
 
 class PagoBase(BaseModel):
-    """Campos de un pago al registrarlo."""
+    """
+    Campos de un pago al registrarlo.
+    usuario_id NO se envía: se deduce del token del usuario autenticado.
+    """
     cobranza_id: UUID
-    usuario_id: UUID  # quién registra (hasta que exista auth JWT)
     cuota_id: Optional[UUID] = None  # NULL = pago directo sin cuota
 
     fecha_pago: Optional[date] = None
@@ -60,6 +62,7 @@ class PagoCreate(PagoBase):
 class PagoResponse(PagoBase):
     """Pago tal como se devuelve al frontend."""
     id: UUID
+    usuario_id: UUID  # quién lo registró (vino del token al crearlo)
     fecha_pago: date
     created_at: datetime
 

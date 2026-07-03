@@ -21,9 +21,11 @@ class TipoGestionResponse(BaseModel):
 
 
 class GestionBase(BaseModel):
-    """Campos de una gestión al registrarla."""
+    """
+    Campos de una gestión al registrarla.
+    OJO: usuario_id NO se envía — se deduce del token del usuario autenticado.
+    """
     cobranza_id: UUID
-    usuario_id: UUID  # mientras no haya auth JWT, se envía explícitamente
     tipo_id: Optional[int] = None
     descripcion: str = Field(..., min_length=1)
     # Si no se envía, PostgreSQL pone NOW(). Permite registrar gestiones con
@@ -40,6 +42,7 @@ class GestionCreate(GestionBase):
 class GestionResponse(GestionBase):
     """Gestión tal como se devuelve (datos planos)."""
     id: UUID
+    usuario_id: UUID  # quién la registró (vino del token al crearla)
     fecha_gestion: datetime
     created_at: datetime
 

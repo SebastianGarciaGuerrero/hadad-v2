@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.security import get_current_user
 from app.models.deudor import Deudor, ContactoDeudor
 from app.schemas.deudor import (
     DeudorCreate,
@@ -40,9 +41,11 @@ from app.schemas.deudor import (
 # Router agrupa endpoints relacionados.
 # prefix="/api/deudores" se agrega a todas las rutas de este router.
 # tags=["Deudores"] agrupa los endpoints en la documentación /docs
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/deudores",
-    tags=["Deudores"]
+    tags=["Deudores"],
+    dependencies=[Depends(get_current_user)],
 )
 
 

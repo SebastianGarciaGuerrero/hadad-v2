@@ -12,9 +12,15 @@ from app.database import get_db
 from app.models.filial import Filial
 from app.models.cliente import Cliente
 from app.schemas.filial import FilialCreate, FilialUpdate, FilialResponse, FilialConCliente
+from app.security import get_current_user
 
 
-router = APIRouter(prefix="/api/filiales", tags=["Filiales"])
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
+router = APIRouter(
+    prefix="/api/filiales",
+    tags=["Filiales"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/", response_model=List[FilialConCliente])

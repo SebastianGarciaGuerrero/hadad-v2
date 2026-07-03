@@ -18,8 +18,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.security import get_current_user
 from app.models.gestion import Gestion, TipoGestion
 from app.models.cobranza import Cobranza
+from app.models.usuario import Usuario
 from app.schemas.gestion import (
     GestionCreate,
     GestionResponse,
@@ -28,9 +30,11 @@ from app.schemas.gestion import (
 )
 
 
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/gestiones",
-    tags=["Gestiones"]
+    tags=["Gestiones"],
+    dependencies=[Depends(get_current_user)],
 )
 
 
@@ -83,11 +87,15 @@ def obtener_gestion(gestion_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=GestionResponse, status_code=status.HTTP_201_CREATED)
-def crear_gestion(gestion_data: GestionCreate, db: Session = Depends(get_db)):
+def crear_gestion(
+    gestion_data: GestionCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
     """
     Registra una gestión nueva (única operación de escritura permitida).
-    Valida que la cobranza exista. Si el usuario o el tipo no existen,
-    PostgreSQL rechaza la inserción y se devuelve 400.
+    Quién la registró (usuario_id) sale del TOKEN, no del payload: nadie
+    puede atribuirle una gestión a otra persona.
     """
     # Validar que la cobranza referenciada exista (404 explícito).
     cobranza = db.query(Cobranza).filter(Cobranza.id == gestion_data.cobranza_id).first()
@@ -98,7 +106,10 @@ def crear_gestion(gestion_data: GestionCreate, db: Session = Depends(get_db)):
         )
 
     # exclude_unset para que, si no envían fecha_gestion, PostgreSQL ponga NOW().
-    nueva_gestion = Gestion(**gestion_data.model_dump(exclude_unset=True))
+    nueva_gestion = Gestion(
+        **gestion_data.model_dump(exclude_unset=True),
+        usuario_id=usuario.id,  # ← del token, firmado; no falsificable
+    )
 
     try:
         db.add(nueva_gestion)

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.security import get_current_user
 from app.models.cobranza import Cobranza
 from app.models.deudor import Deudor
 from app.schemas.cobranza import (
@@ -30,9 +31,11 @@ from app.schemas.cobranza import (
 )
 
 
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/cobranzas",
-    tags=["Cobranzas"]
+    tags=["Cobranzas"],
+    dependencies=[Depends(get_current_user)],
 )
 
 

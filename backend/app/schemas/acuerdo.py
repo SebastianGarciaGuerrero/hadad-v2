@@ -36,9 +36,11 @@ class CuotaResponse(BaseModel):
 
 
 class AcuerdoBase(BaseModel):
-    """Campos que definen el acuerdo al crearlo."""
+    """
+    Campos que definen el acuerdo al crearlo.
+    usuario_id NO se envía: se deduce del token del usuario autenticado.
+    """
     cobranza_id: UUID
-    usuario_id: UUID  # quién registra (hasta que exista auth JWT)
 
     fecha_acuerdo: Optional[date] = None
     pie: Decimal = Field(Decimal("0"), ge=0, max_digits=15, decimal_places=2)
@@ -83,6 +85,7 @@ class AcuerdoEstadoUpdate(BaseModel):
 class AcuerdoResponse(AcuerdoBase):
     """Acuerdo tal como se devuelve (datos planos)."""
     id: UUID
+    usuario_id: UUID  # quién lo registró (vino del token al crearlo)
     estado: EstadoAcuerdo
     fecha_termino: Optional[date] = None
     created_at: datetime

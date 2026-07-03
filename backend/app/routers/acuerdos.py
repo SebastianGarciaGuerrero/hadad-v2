@@ -25,8 +25,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.security import get_current_user
 from app.models.acuerdo import AcuerdoPago, Cuota
 from app.models.cobranza import Cobranza
+from app.models.usuario import Usuario
 from app.schemas.acuerdo import (
     AcuerdoCreate,
     AcuerdoEstadoUpdate,
@@ -35,9 +37,11 @@ from app.schemas.acuerdo import (
 )
 
 
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/acuerdos",
-    tags=["Acuerdos de pago"]
+    tags=["Acuerdos de pago"],
+    dependencies=[Depends(get_current_user)],
 )
 
 
@@ -119,10 +123,15 @@ def obtener_acuerdo(acuerdo_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=AcuerdoDetalle, status_code=status.HTTP_201_CREATED)
-def crear_acuerdo(acuerdo_data: AcuerdoCreate, db: Session = Depends(get_db)):
+def crear_acuerdo(
+    acuerdo_data: AcuerdoCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
     """
     Crea un acuerdo, genera sus cuotas automáticamente y deja la cobranza en
     estado 'acuerdo_pago'. Rechaza si la cobranza ya tiene un acuerdo vigente.
+    Quién lo registró (usuario_id) sale del token.
     """
     # 1. La cobranza debe existir.
     cobranza = db.query(Cobranza).filter(Cobranza.id == acuerdo_data.cobranza_id).first()
@@ -151,7 +160,10 @@ def crear_acuerdo(acuerdo_data: AcuerdoCreate, db: Session = Depends(get_db)):
         )
 
     # 3. Crear el acuerdo (estado 'vigente' por defecto).
-    nuevo_acuerdo = AcuerdoPago(**acuerdo_data.model_dump())
+    nuevo_acuerdo = AcuerdoPago(
+        **acuerdo_data.model_dump(),
+        usuario_id=usuario.id,  # ← del token, no falsificable
+    )
 
     # 4. Generar cuotas y fijar fecha_termino (vencimiento de la última).
     nuevo_acuerdo.cuotas = _generar_cuotas(nuevo_acuerdo)

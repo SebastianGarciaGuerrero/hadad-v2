@@ -27,15 +27,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.security import get_current_user
 from app.models.pago import Pago
 from app.models.cobranza import Cobranza
 from app.models.acuerdo import Cuota, AcuerdoPago
+from app.models.usuario import Usuario
 from app.schemas.pago import PagoCreate, PagoResponse
 
 
+# dependencies=[...] exige token válido en TODOS los endpoints del router.
 router = APIRouter(
     prefix="/api/pagos",
-    tags=["Pagos"]
+    tags=["Pagos"],
+    dependencies=[Depends(get_current_user)],
 )
 
 
@@ -78,8 +82,15 @@ def obtener_pago(pago_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=PagoResponse, status_code=status.HTTP_201_CREATED)
-def registrar_pago(pago_data: PagoCreate, db: Session = Depends(get_db)):
-    """Registra un pago y aplica la cascada. Todo se confirma junto o nada."""
+def registrar_pago(
+    pago_data: PagoCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """
+    Registra un pago y aplica la cascada. Todo se confirma junto o nada.
+    Quién lo registró (usuario_id) sale del token.
+    """
     # --- Validaciones previas ---
     cobranza = db.query(Cobranza).filter(Cobranza.id == pago_data.cobranza_id).first()
     if not cobranza:
@@ -104,7 +115,10 @@ def registrar_pago(pago_data: PagoCreate, db: Session = Depends(get_db)):
             )
 
     # --- Crear el pago ---
-    nuevo_pago = Pago(**pago_data.model_dump())
+    nuevo_pago = Pago(
+        **pago_data.model_dump(),
+        usuario_id=usuario.id,  # ← del token, no falsificable
+    )
     db.add(nuevo_pago)
 
     monto = Decimal(pago_data.monto)
