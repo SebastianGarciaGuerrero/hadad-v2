@@ -16,9 +16,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.security import verificar_password, crear_access_token, get_current_user
+from app.security import (
+    verificar_password,
+    hashear_password,
+    crear_access_token,
+    get_current_user,
+)
 from app.schemas.auth import Token
-from app.schemas.usuario import UsuarioResponse
+from app.schemas.usuario import UsuarioResponse, CambiarPassword
 
 
 router = APIRouter(
@@ -60,3 +65,24 @@ def login(
 def leer_usuario_actual(usuario: Usuario = Depends(get_current_user)):
     """Devuelve los datos del usuario autenticado (requiere token)."""
     return usuario
+
+
+@router.put("/cambiar-password", status_code=status.HTTP_204_NO_CONTENT)
+def cambiar_mi_password(
+    datos: CambiarPassword,
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    El usuario autenticado cambia SU PROPIA contraseña.
+    Exige la contraseña actual como confirmación (protege si alguien deja
+    la sesión abierta y otro intenta secuestrar la cuenta).
+    """
+    if not verificar_password(datos.password_actual, usuario.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="La contraseña actual no es correcta",
+        )
+    usuario.password_hash = hashear_password(datos.password_nueva)
+    db.commit()
+    return None

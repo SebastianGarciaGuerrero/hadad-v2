@@ -99,3 +99,17 @@ def get_current_user(
             detail="Usuario inactivo",
         )
     return usuario
+
+
+def require_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
+    """
+    Dependencia para endpoints SOLO-ADMIN (ej. gestión de usuarios).
+    Se apoya en get_current_user y además exige rol 'admin'.
+    Uso: def algo(admin: Usuario = Depends(require_admin)): ...
+    """
+    if usuario.rol is None or usuario.rol.nombre != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere rol de administrador para esta operación",
+        )
+    return usuario
