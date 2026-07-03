@@ -1,13 +1,14 @@
 """
 Endpoints de exportación a Excel (openpyxl).
 
-  GET /api/exportar/gestiones → descarga un .xlsx con las gestiones de los
-      últimos N días (default 15), filtrable por cliente o por filial.
+  GET /api/exportar/gestiones → gestiones de los últimos N días (default 15),
+      filtrable por cliente o por filial.
+  GET /api/exportar/recupero  → detalle de pagos de un mes (reemplaza el
+      Excel de recupero mensual). Usa la vista SQL vista_recupero.
+  GET /api/exportar/rendicion → cuadro resumen por cliente/filial de un mes
+      (lo que se envía a la clínica). Usa la vista SQL vista_rendicion.
 
-Pensado para el informe periódico que se envía/revisa por clínica:
-"todas las gestiones de los últimos 15 días de Redsalud Temuco".
-
-El archivo se genera en memoria (BytesIO): no se escribe nada a disco.
+Los archivos se generan en memoria (BytesIO): no se escribe nada a disco.
 """
 
 import unicodedata
@@ -18,6 +19,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -48,6 +50,56 @@ ENCABEZADOS = [
     "Próximo contacto", "Registrada por",
 ]
 
+# Formato de montos: separador de miles, sin decimales (pesos chilenos).
+FORMATO_PESOS = "#,##0"
+
+
+def _hoja_con_encabezados(titulo: str, encabezados: list, anchos: list):
+    """Crea un workbook con una hoja, encabezado con estilo y panel congelado."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = titulo[:31]  # Excel limita el nombre de hoja a 31 caracteres
+    fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    for col, texto in enumerate(encabezados, start=1):
+        celda = ws.cell(row=1, column=col, value=texto)
+        celda.font = Font(bold=True, color="FFFFFF")
+        celda.fill = fill
+        celda.alignment = Alignment(horizontal="center")
+    ws.freeze_panes = "A2"
+    for col, ancho in enumerate(anchos, start=1):
+        ws.column_dimensions[get_column_letter(col)].width = ancho
+    return wb, ws
+
+
+def _responder_xlsx(wb: Workbook, nombre_archivo: str) -> StreamingResponse:
+    """Serializa el workbook en memoria y lo devuelve como descarga."""
+    # Los headers HTTP no aceptan bien acentos/ñ: normalizamos a ASCII
+    # ("Valparaíso" → "Valparaiso") para que el nombre no se corrompa.
+    nombre_archivo = (
+        unicodedata.normalize("NFKD", nombre_archivo.replace(" ", "_"))
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo}"'},
+    )
+
+
+def _validar_cliente(db: Session, cliente_id: UUID) -> Cliente:
+    """Devuelve el cliente o lanza 404."""
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cliente con id {cliente_id} no encontrado",
+        )
+    return cliente
+
 
 @router.get("/gestiones")
 def exportar_gestiones(
@@ -77,12 +129,7 @@ def exportar_gestiones(
 
     nombre_filtro = "todas"
     if cliente_id is not None:
-        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        if not cliente:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Cliente con id {cliente_id} no encontrado",
-            )
+        cliente = _validar_cliente(db, cliente_id)
         query = query.filter(Cobranza.cliente_id == cliente_id)
         nombre_filtro = (cliente.nombre_fantasia or cliente.razon_social)
     if filial_id is not None:
@@ -98,18 +145,10 @@ def exportar_gestiones(
     filas = query.order_by(Gestion.fecha_gestion.desc()).all()
 
     # --- Armar el Excel ---
-    wb = Workbook()
-    ws = wb.active
-    ws.title = f"Gestiones últimos {dias} días"
-
-    # Encabezado con estilo (negrita, fondo, centrado) y panel congelado.
-    fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
-    for col, titulo in enumerate(ENCABEZADOS, start=1):
-        celda = ws.cell(row=1, column=col, value=titulo)
-        celda.font = Font(bold=True, color="FFFFFF")
-        celda.fill = fill
-        celda.alignment = Alignment(horizontal="center")
-    ws.freeze_panes = "A2"
+    anchos = [17, 10, 12, 13, 30, 16, 14, 22, 60, 16, 20]
+    wb, ws = _hoja_con_encabezados(
+        f"Gestiones últimos {dias} días", ENCABEZADOS, anchos
+    )
 
     for i, (g, cob, deu, cli, fil, tipo, usu) in enumerate(filas, start=2):
         ws.cell(row=i, column=1, value=g.fecha_gestion.replace(tzinfo=None)
@@ -127,28 +166,143 @@ def exportar_gestiones(
                     ).number_format = "DD-MM-YYYY"
         ws.cell(row=i, column=11, value=usu.nombre)
 
-    # Anchos de columna razonables (descripción más ancha).
-    anchos = [17, 10, 12, 13, 30, 16, 14, 22, 60, 16, 20]
-    for col, ancho in enumerate(anchos, start=1):
-        ws.column_dimensions[get_column_letter(col)].width = ancho
-
-    # Guardar en memoria y responder como descarga.
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-
     hoy = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    nombre_archivo = f"gestiones_{nombre_filtro}_{dias}dias_{hoy}.xlsx".replace(" ", "_")
-    # Los headers HTTP no aceptan bien acentos/ñ: normalizamos a ASCII
-    # ("Valparaíso" → "Valparaiso") para que el nombre no se corrompa.
-    nombre_archivo = (
-        unicodedata.normalize("NFKD", nombre_archivo)
-        .encode("ascii", "ignore")
-        .decode("ascii")
-    )
+    return _responder_xlsx(wb, f"gestiones_{nombre_filtro}_{dias}dias_{hoy}.xlsx")
 
-    return StreamingResponse(
-        buffer,
-        media_type=XLSX_MIME,
-        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo}"'},
-    )
+
+@router.get("/recupero")
+def exportar_recupero(
+    anio: Optional[int] = Query(None, ge=2000, le=2100, description="Año (default: actual)"),
+    mes: Optional[int] = Query(None, ge=1, le=12, description="Mes 1-12 (default: actual)"),
+    cliente_id: Optional[UUID] = Query(None, description="Filtrar por cliente"),
+    db: Session = Depends(get_db),
+):
+    """
+    Descarga el RECUPERO del mes: el detalle de cada pago recibido, con su
+    desglose capital/honorarios/interés. Reemplaza el Excel de recupero.
+    Usa la vista SQL vista_recupero (siempre al día con los pagos).
+    """
+    ahora = datetime.now(timezone.utc)
+    anio = anio or ahora.year
+    mes = mes or ahora.month
+
+    sql = """
+        SELECT * FROM vista_recupero
+        WHERE mes = make_date(:anio, :mes, 1)
+    """
+    params = {"anio": anio, "mes": mes}
+
+    nombre_filtro = "todos"
+    if cliente_id is not None:
+        cliente = _validar_cliente(db, cliente_id)
+        # La vista expone la razón social, no el id.
+        sql += " AND cliente = :cliente"
+        params["cliente"] = cliente.razon_social
+        nombre_filtro = cliente.nombre_fantasia or cliente.razon_social
+
+    sql += " ORDER BY fecha_pago, numero_cobranza"
+    filas = db.execute(text(sql), params).mappings().all()
+
+    encabezados = [
+        "Fecha pago", "N° Hadad", "ID clínica", "Cliente", "Filial",
+        "Deudor", "RUT deudor", "Total recibido", "Capital clínica",
+        "Honorarios Hadad", "Interés clínica", "Estado", "Forma de pago",
+        "N° comprobante", "Cuota", "Registrado por",
+    ]
+    anchos = [12, 10, 12, 16, 14, 30, 13, 14, 14, 15, 13, 12, 14, 16, 8, 20]
+    wb, ws = _hoja_con_encabezados(f"Recupero {mes:02d}-{anio}", encabezados, anchos)
+
+    for i, r in enumerate(filas, start=2):
+        ws.cell(row=i, column=1, value=r["fecha_pago"]).number_format = "DD-MM-YYYY"
+        ws.cell(row=i, column=2, value=r["numero_cobranza"])
+        ws.cell(row=i, column=3, value=r["id_clinica"])
+        ws.cell(row=i, column=4, value=r["cliente"])
+        ws.cell(row=i, column=5, value=r["filial"])
+        ws.cell(row=i, column=6, value=r["deudor"])
+        ws.cell(row=i, column=7, value=r["rut_deudor"])
+        for col, campo in [(8, "total_recibido"), (9, "capital_clinica"),
+                           (10, "honorarios_hadad"), (11, "interes_clinica")]:
+            ws.cell(row=i, column=col, value=r[campo]).number_format = FORMATO_PESOS
+        ws.cell(row=i, column=12, value=r["estado_pago"])
+        ws.cell(row=i, column=13, value=r["forma_pago"])
+        ws.cell(row=i, column=14, value=r["numero_comprobante"])
+        if r["numero_cuota"]:
+            ws.cell(row=i, column=15,
+                    value=f'{r["numero_cuota"]}/{r["total_cuotas_acuerdo"]}')
+        ws.cell(row=i, column=16, value=r["registrado_por"])
+
+    # Fila de totales al final (suma en Excel, se recalcula sola).
+    if filas:
+        tot = len(filas) + 2
+        ws.cell(row=tot, column=7, value="TOTALES").font = Font(bold=True)
+        for col in (8, 9, 10, 11):
+            letra = get_column_letter(col)
+            celda = ws.cell(row=tot, column=col, value=f"=SUM({letra}2:{letra}{tot-1})")
+            celda.font = Font(bold=True)
+            celda.number_format = FORMATO_PESOS
+
+    return _responder_xlsx(wb, f"recupero_{nombre_filtro}_{anio}-{mes:02d}.xlsx")
+
+
+@router.get("/rendicion")
+def exportar_rendicion(
+    anio: Optional[int] = Query(None, ge=2000, le=2100, description="Año (default: actual)"),
+    mes: Optional[int] = Query(None, ge=1, le=12, description="Mes 1-12 (default: actual)"),
+    cliente_id: Optional[UUID] = Query(None, description="Filtrar por cliente"),
+    db: Session = Depends(get_db),
+):
+    """
+    Descarga el CUADRO DE RENDICIÓN del mes: resumen por cliente/filial de
+    cuánto se rinde a la clínica (capital + interés) y cuánto queda en Hadad
+    (honorarios). Es lo que se envía a la clínica cada mes.
+    Usa la vista SQL vista_rendicion.
+    """
+    ahora = datetime.now(timezone.utc)
+    anio = anio or ahora.year
+    mes = mes or ahora.month
+
+    sql = """
+        SELECT * FROM vista_rendicion
+        WHERE mes = make_date(:anio, :mes, 1)
+    """
+    params = {"anio": anio, "mes": mes}
+
+    nombre_filtro = "todos"
+    if cliente_id is not None:
+        cliente = _validar_cliente(db, cliente_id)
+        sql += " AND cliente = :cliente"
+        params["cliente"] = cliente.razon_social
+        nombre_filtro = cliente.nombre_fantasia or cliente.razon_social
+
+    sql += " ORDER BY cliente, filial"
+    filas = db.execute(text(sql), params).mappings().all()
+
+    encabezados = [
+        "Cliente", "Filial", "Cantidad de pagos", "Capital clínica",
+        "Interés clínica", "Total a rendir a clínica",
+        "Honorarios Hadad", "Total recibido",
+    ]
+    anchos = [20, 16, 16, 15, 14, 20, 16, 14]
+    wb, ws = _hoja_con_encabezados(f"Rendición {mes:02d}-{anio}", encabezados, anchos)
+
+    for i, r in enumerate(filas, start=2):
+        ws.cell(row=i, column=1, value=r["cliente"])
+        ws.cell(row=i, column=2, value=r["filial"])
+        ws.cell(row=i, column=3, value=r["cantidad_pagos"])
+        for col, campo in [(4, "total_capital_clinica"), (5, "total_interes_clinica"),
+                           (6, "total_a_rendir_clinica"), (7, "total_honorarios_hadad"),
+                           (8, "total_recibido")]:
+            ws.cell(row=i, column=col, value=r[campo]).number_format = FORMATO_PESOS
+
+    if filas:
+        tot = len(filas) + 2
+        ws.cell(row=tot, column=2, value="TOTALES").font = Font(bold=True)
+        celda = ws.cell(row=tot, column=3, value=f"=SUM(C2:C{tot-1})")
+        celda.font = Font(bold=True)
+        for col in (4, 5, 6, 7, 8):
+            letra = get_column_letter(col)
+            celda = ws.cell(row=tot, column=col, value=f"=SUM({letra}2:{letra}{tot-1})")
+            celda.font = Font(bold=True)
+            celda.number_format = FORMATO_PESOS
+
+    return _responder_xlsx(wb, f"rendicion_{nombre_filtro}_{anio}-{mes:02d}.xlsx")
