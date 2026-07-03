@@ -11,7 +11,7 @@ INSERT INTO usuarios (nombre, email, password_hash, rol_id)
 VALUES (
     'Admin Hadad',
     'admin@hadad.cl',
-    '$2b$12$3PvA.gOq/3sVxL.PrL5tjOu8B.6mZGsmIYzWyXg3MmAQg6BgmjVQq',
+    '$2b$12$s2tivBdS2GnMw/tmjXWasuPffWBrFzbUEUAzO.0jawW0dhoO3wCLW',
     (SELECT id FROM roles WHERE nombre = 'admin')
 );
 

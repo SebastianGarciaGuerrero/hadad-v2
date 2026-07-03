@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     app_name: str = "Hadad 2.0 API"
     environment: str = "development"
     debug: bool = True
+
+    # Seguridad / JWT
+    # ⚠️ secret_key: en PRODUCCIÓN debe venir del .env con un valor largo y
+    # aleatorio (ej. `openssl rand -hex 32`). Este default es SOLO para
+    # desarrollo local. Si se filtra, cualquiera puede firmar tokens válidos.
+    secret_key: str = "dev-secret-cambiar-en-produccion-por-favor"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 480  # 8 horas (una jornada laboral)
     
     # Configuración para leer el archivo .env
     model_config = SettingsConfigDict(

@@ -13,6 +13,7 @@ from app.config import settings
 # (cobranzas.ejecutivo_id/paciente_id, gestiones/acuerdos.usuario_id).
 from app.models import rol, usuario, paciente  # noqa: F401
 
+from app.routers import auth
 from app.routers import clientes
 from app.routers import filiales
 from app.routers import deudores
@@ -30,6 +31,7 @@ app = FastAPI(
 
 
 # Registrar routers (módulos de endpoints)
+app.include_router(auth.router)
 app.include_router(clientes.router)
 app.include_router(filiales.router)
 app.include_router(deudores.router)

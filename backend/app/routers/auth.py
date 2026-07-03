@@ -1,0 +1,62 @@
+"""
+Endpoints de autenticación.
+
+  POST /api/auth/login  → email + contraseña → devuelve un JWT
+  GET  /api/auth/me     → devuelve el usuario dueño del token (protegido)
+
+El login recibe form-data (username = email, password) para que funcione el
+botón "Authorize" de /docs: pegas email y contraseña ahí y Swagger manda el
+token en todas las llamadas siguientes.
+"""
+
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.usuario import Usuario
+from app.security import verificar_password, crear_access_token, get_current_user
+from app.schemas.auth import Token
+from app.schemas.usuario import UsuarioResponse
+
+
+router = APIRouter(
+    prefix="/api/auth",
+    tags=["Autenticación"]
+)
+
+
+@router.post("/login", response_model=Token)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    """Valida email + contraseña y devuelve un token de acceso (JWT)."""
+    usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
+
+    # Mismo mensaje para "no existe" y "contraseña mala": no revelar cuál falló.
+    if not usuario or not verificar_password(form_data.password, usuario.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not usuario.activo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario inactivo",
+        )
+
+    # Registrar el último acceso.
+    usuario.ultimo_acceso = datetime.now(timezone.utc)
+    db.commit()
+
+    token = crear_access_token({"sub": str(usuario.id), "rol_id": usuario.rol_id})
+    return Token(access_token=token)
+
+
+@router.get("/me", response_model=UsuarioResponse)
+def leer_usuario_actual(usuario: Usuario = Depends(get_current_user)):
+    """Devuelve los datos del usuario autenticado (requiere token)."""
+    return usuario
