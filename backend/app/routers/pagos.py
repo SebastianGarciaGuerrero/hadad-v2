@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
-from app.security import get_current_user
+from app.security import get_current_user, usuario_autorizado
 from app.models.pago import Pago
 from app.models.cobranza import Cobranza
 from app.models.acuerdo import Cuota, AcuerdoPago
@@ -35,11 +35,12 @@ from app.models.usuario import Usuario
 from app.schemas.pago import PagoCreate, PagoResponse
 
 
-# dependencies=[...] exige token válido en TODOS los endpoints del router.
+# dependencies=[...] exige token válido en TODOS los endpoints del router
+# y aplica la regla de roles (viewer = solo lectura).
 router = APIRouter(
     prefix="/api/pagos",
     tags=["Pagos"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(usuario_autorizado)],
 )
 
 

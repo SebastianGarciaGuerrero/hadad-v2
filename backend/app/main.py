@@ -13,6 +13,10 @@ from app.config import settings
 # (cobranzas.ejecutivo_id/paciente_id, gestiones/acuerdos.usuario_id).
 from app.models import rol, usuario, paciente  # noqa: F401
 
+# Auditoría automática: importar este módulo registra el listener que escribe
+# en audit_log cada INSERT/UPDATE/DELETE de las tablas de negocio.
+from app import auditoria  # noqa: F401
+
 from app.routers import auth
 from app.routers import usuarios
 from app.routers import clientes
@@ -22,7 +26,9 @@ from app.routers import cobranzas
 from app.routers import gestiones
 from app.routers import acuerdos
 from app.routers import pagos
+from app.routers import judicial
 from app.routers import exportar
+from app.routers import auditoria as auditoria_router
 
 
 app = FastAPI(
@@ -42,7 +48,9 @@ app.include_router(cobranzas.router)
 app.include_router(gestiones.router)
 app.include_router(acuerdos.router)
 app.include_router(pagos.router)
+app.include_router(judicial.router)
 app.include_router(exportar.router)
+app.include_router(auditoria_router.router)
 
 
 @app.get("/")

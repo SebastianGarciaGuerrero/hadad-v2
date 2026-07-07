@@ -12,14 +12,15 @@ from app.database import get_db
 from app.models.filial import Filial
 from app.models.cliente import Cliente
 from app.schemas.filial import FilialCreate, FilialUpdate, FilialResponse, FilialConCliente
-from app.security import get_current_user
+from app.security import usuario_autorizado
 
 
-# dependencies=[...] exige token válido en TODOS los endpoints del router.
+# dependencies=[...] exige token válido en TODOS los endpoints del router
+# y aplica la regla de roles (viewer = solo lectura).
 router = APIRouter(
     prefix="/api/filiales",
     tags=["Filiales"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(usuario_autorizado)],
 )
 
 

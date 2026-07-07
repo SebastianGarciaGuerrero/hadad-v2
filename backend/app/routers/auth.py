@@ -10,9 +10,11 @@ token en todas las llamadas siguientes.
 """
 
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
+from app.auditoria import CLAVE_CONTEXTO
 
 from app.database import get_db
 from app.models.usuario import Usuario
@@ -34,6 +36,7 @@ router = APIRouter(
 
 @router.post("/login", response_model=Token)
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
@@ -52,6 +55,13 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario inactivo",
         )
+
+    # Contexto para que la auditoría atribuya este cambio al propio usuario
+    # (el login no pasa por get_current_user, que es quien suele fijarlo).
+    db.info[CLAVE_CONTEXTO] = {
+        "usuario_id": usuario.id,
+        "ip": request.client.host if request.client else None,
+    }
 
     # Registrar el último acceso.
     usuario.ultimo_acceso = datetime.now(timezone.utc)
