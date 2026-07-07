@@ -1,19 +1,19 @@
 /* ============================================================
    Hadad 2.0 — hoja de estilos
-   Paleta: azul institucional #1F4E78 (el mismo de los Excel),
-   sidebar oscuro, contenido claro.
+   Paleta: blanco y gris oscuro. Los estados de cobranza conservan
+   sus colores semánticos (verde pagada, rojo castigo, etc.).
    ============================================================ */
 
 :root {
-  --azul: #1f4e78;
-  --azul-claro: #2d6da8;
-  --oscuro: #16222e;
-  --oscuro-2: #1e2f3f;
-  --fondo: #f4f6f8;
+  --acento: #3f3f46;        /* gris oscuro: botones, cabeceras, enlaces activos */
+  --acento-claro: #55555e;
+  --oscuro: #1c1c20;        /* sidebar */
+  --oscuro-2: #2b2b31;
+  --fondo: #f5f5f6;
   --tarjeta: #ffffff;
-  --borde: #dde3e9;
-  --texto: #1c2733;
-  --texto-suave: #64748b;
+  --borde: #e2e2e6;
+  --texto: #212126;
+  --texto-suave: #71717a;
   --rojo: #b42318;
   --verde: #067647;
   --ambar: #b54708;
@@ -59,7 +59,7 @@ body {
 
 .marca-logo {
   width: 40px; height: 40px;
-  background: var(--azul);
+  background: var(--acento);
   color: #fff;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
@@ -82,7 +82,7 @@ body {
 }
 
 .menu a:hover { background: var(--oscuro-2); color: #fff; }
-.menu a.active { background: var(--azul); color: #fff; }
+.menu a.active { background: var(--acento); color: #fff; }
 
 .sidebar-pie {
   border-top: 1px solid var(--oscuro-2);
@@ -107,7 +107,7 @@ body {
   text-decoration: none;
   font-size: 13px;
 }
-.volver:hover { color: var(--azul); }
+.volver:hover { color: var(--acento); }
 
 /* ---------- Filtros / buscador ---------- */
 
@@ -125,7 +125,7 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--azul-claro);
+  outline: 2px solid var(--acento-claro);
   outline-offset: -1px;
 }
 
@@ -145,7 +145,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 }
 
 .tabla th {
-  background: var(--azul);
+  background: var(--acento);
   color: #fff;
   text-align: left;
   padding: 10px 14px;
@@ -174,7 +174,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   margin-left: 6px;
 }
 
-.etiqueta-activa       { background: #e0edff; color: var(--azul); }
+.etiqueta-activa       { background: #e0edff; color: #175cd3; }
 .etiqueta-acuerdo_pago { background: #fef0c7; color: var(--ambar); }
 .etiqueta-judicial     { background: #ece4ff; color: var(--morado); }
 .etiqueta-pagada       { background: #d3f5e2; color: var(--verde); }
@@ -194,16 +194,16 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   display: inline-block;
 }
 
-.btn-primario { background: var(--azul); color: #fff; }
-.btn-primario:hover { background: var(--azul-claro); }
+.btn-primario { background: var(--acento); color: #fff; }
+.btn-primario:hover { background: var(--acento-claro); }
 .btn-primario:disabled { opacity: 0.6; cursor: wait; }
 
 .btn-secundario {
   background: #fff;
-  color: var(--azul);
+  color: var(--acento);
   border: 1px solid var(--borde);
 }
-.btn-secundario:hover { border-color: var(--azul); }
+.btn-secundario:hover { border-color: var(--acento); }
 
 .btn-chico { padding: 5px 12px; font-size: 13px; }
 
@@ -212,7 +212,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 .login-fondo {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(150deg, var(--oscuro) 0%, var(--azul) 100%);
+  background: linear-gradient(150deg, var(--oscuro) 0%, var(--acento) 100%);
 }
 
 .login-caja {
@@ -284,7 +284,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 }
 
 .linea-tiempo li {
-  border-left: 3px solid var(--azul);
+  border-left: 3px solid var(--acento);
   background: #f8fafc;
   border-radius: 0 8px 8px 0;
   padding: 10px 14px;
@@ -293,7 +293,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 .linea-tiempo p { margin: 6px 0 0; white-space: pre-wrap; }
 
 .gestion-cabecera { display: flex; justify-content: space-between; gap: 10px; }
-.gestion-tipo { font-weight: 700; font-size: 13.5px; color: var(--azul); }
+.gestion-tipo { font-weight: 700; font-size: 13.5px; color: var(--acento); }
 
 .proximo-aviso {
   margin-top: 8px;
