@@ -14,10 +14,10 @@ export default function Layout() {
     <div className="app">
       <aside className="sidebar">
         <div className="marca">
-          <span className="marca-logo">H</span>
+          <img className="marca-logo-img" src="/logo.svg" alt="Hadad & Asociados" />
           <div>
-            <div className="marca-nombre">Hadad 2.0</div>
-            <div className="marca-sub">González &amp; Hadad</div>
+            <div className="marca-nombre">Hadad &amp; Asociados</div>
+            <div className="marca-sub">Asesoría legal y financiera</div>
           </div>
         </div>
 
@@ -38,6 +38,12 @@ export default function Layout() {
 
       <main className="contenido">
         <Outlet />
+        <footer className="pie-firma">
+          Creado por{' '}
+          <a href="https://sebastiangarcia.cl" target="_blank" rel="noreferrer">
+            sebastiangarcia.cl
+          </a>
+        </footer>
       </main>
     </div>
   )

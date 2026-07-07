@@ -29,12 +29,10 @@ export default function Login() {
   return (
     <div className="login-fondo">
       <form className="login-caja" onSubmit={alEnviar}>
-        <div className="marca login-marca">
-          <span className="marca-logo">H</span>
-          <div>
-            <div className="marca-nombre">Hadad 2.0</div>
-            <div className="marca-sub">Sistema de cobranza</div>
-          </div>
+        <div className="login-marca">
+          <img className="login-logo" src="/logo.svg" alt="Hadad & Asociados" />
+          <div className="login-titulo">HADAD &amp; ASOCIADOS</div>
+          <div className="login-subtitulo">Asesoría legal y financiera</div>
         </div>
 
         <label>
@@ -64,6 +62,13 @@ export default function Login() {
         <button className="btn btn-primario" disabled={enviando}>
           {enviando ? 'Ingresando…' : 'Ingresar'}
         </button>
+
+        <div className="pie-firma">
+          Creado por{' '}
+          <a href="https://sebastiangarcia.cl" target="_blank" rel="noreferrer">
+            sebastiangarcia.cl
+          </a>
+        </div>
       </form>
     </div>
   )
