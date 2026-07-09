@@ -1,0 +1,348 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api, mensajeDeError } from '../api/client'
+import type {
+  Cobranza, Acuerdo, AcuerdoDetalle, Cuota, Pago, EstadoCuota,
+} from '../api/tipos'
+import { Plata, fechaLegible } from './utiles'
+
+// Sección financiera de la ficha de cobranza: acuerdo de pago con sus
+// cuotas, historial de pagos, y registro de pagos (por cuota o directos).
+// El backend aplica la cascada: saldo, estado de cuota, acuerdo y cobranza.
+
+const FORMAS_PAGO = [
+  'transferencia', 'cheque', 'efectivo', 'deposito',
+  'flow', 'presencial', 'bonificacion', 'otro',
+] as const
+
+const NOMBRE_CUOTA: Record<EstadoCuota, string> = {
+  pendiente: 'Pendiente',
+  pagada: 'Pagada',
+  vencida: 'Vencida',
+  pagada_parcial: 'Pago parcial',
+}
+
+// Reutiliza los colores de las etiquetas de cobranza.
+const CLASE_CUOTA: Record<EstadoCuota, string> = {
+  pendiente: 'etiqueta-archivada',
+  pagada: 'etiqueta-pagada',
+  vencida: 'etiqueta-castigo',
+  pagada_parcial: 'etiqueta-acuerdo_pago',
+}
+
+export default function Finanzas({ cobranza }: { cobranza: Cobranza }) {
+  const qc = useQueryClient()
+  const cobranzaId = cobranza.id
+
+  const { data: acuerdos } = useQuery({
+    queryKey: ['acuerdos', cobranzaId],
+    queryFn: async () =>
+      (await api.get<Acuerdo[]>('/acuerdos/', { params: { cobranza_id: cobranzaId } })).data,
+  })
+
+  // El acuerdo relevante: el vigente si existe, si no el más reciente.
+  const acuerdo = acuerdos?.find((a) => a.estado === 'vigente') ?? acuerdos?.[0]
+
+  const { data: acuerdoDetalle } = useQuery({
+    queryKey: ['acuerdo', acuerdo?.id],
+    enabled: acuerdo !== undefined,
+    queryFn: async () =>
+      (await api.get<AcuerdoDetalle>(`/acuerdos/${acuerdo!.id}`)).data,
+  })
+
+  const { data: pagos } = useQuery({
+    queryKey: ['pagos', cobranzaId],
+    queryFn: async () =>
+      (await api.get<Pago[]>('/pagos/', { params: { cobranza_id: cobranzaId } })).data,
+  })
+
+  // Refresca todo lo que la cascada del backend puede haber cambiado.
+  function refrescarTodo() {
+    qc.invalidateQueries({ queryKey: ['cobranza', cobranzaId] })
+    qc.invalidateQueries({ queryKey: ['cobranzas'] })
+    qc.invalidateQueries({ queryKey: ['acuerdos', cobranzaId] })
+    qc.invalidateQueries({ queryKey: ['acuerdo'] })
+    qc.invalidateQueries({ queryKey: ['pagos', cobranzaId] })
+  }
+
+  // --- Estado del formulario de pago (por cuota o directo) ---
+  const [pagando, setPagando] = useState<Cuota | 'directo' | null>(null)
+
+  return (
+    <section className="tarjeta finanzas">
+      <h2>Acuerdo de pago y pagos</h2>
+
+      {acuerdoDetalle ? (
+        <>
+          <div className="acuerdo-resumen">
+            <div>
+              <span className="suave">Acuerdo del {fechaLegible(acuerdoDetalle.fecha_acuerdo)}</span>{' '}
+              <span className={`etiqueta ${acuerdoDetalle.estado === 'vigente'
+                ? 'etiqueta-activa'
+                : acuerdoDetalle.estado === 'cumplido'
+                  ? 'etiqueta-pagada'
+                  : 'etiqueta-castigo'}`}>
+                {acuerdoDetalle.estado}
+              </span>
+            </div>
+            <div>
+              <Plata valor={acuerdoDetalle.monto_total_acordado} /> en{' '}
+              {acuerdoDetalle.numero_cuotas} cuota(s)
+              {Number(acuerdoDetalle.pie) > 0 && (
+                <span className="suave"> · pie <Plata valor={acuerdoDetalle.pie} /></span>
+              )}
+            </div>
+          </div>
+
+          <table className="tabla tabla-cuotas">
+            <thead>
+              <tr>
+                <th>Cuota</th><th>Vence</th>
+                <th className="der">Monto</th><th className="der">Pagado</th>
+                <th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {acuerdoDetalle.cuotas.map((c) => (
+                <tr key={c.id}>
+                  <td className="mono">{c.numero_cuota}/{acuerdoDetalle.numero_cuotas}</td>
+                  <td>{fechaLegible(c.fecha_vencimiento)}</td>
+                  <td className="der"><Plata valor={c.monto} /></td>
+                  <td className="der"><Plata valor={c.monto_pagado} /></td>
+                  <td>
+                    <span className={`etiqueta ${CLASE_CUOTA[c.estado]}`}>
+                      {NOMBRE_CUOTA[c.estado]}
+                    </span>
+                  </td>
+                  <td>
+                    {c.estado !== 'pagada' && acuerdoDetalle.estado === 'vigente' && (
+                      <button
+                        className="btn btn-chico btn-secundario"
+                        onClick={() => setPagando(c)}
+                      >
+                        Registrar pago
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : (
+        <FormNuevoAcuerdo cobranza={cobranza} alCrear={refrescarTodo} />
+      )}
+
+      {pagando && (
+        <FormPago
+          cobranzaId={cobranzaId}
+          cuota={pagando === 'directo' ? null : pagando}
+          alTerminar={() => { setPagando(null); refrescarTodo() }}
+          alCancelar={() => setPagando(null)}
+        />
+      )}
+
+      <div className="finanzas-pie">
+        <h2>Pagos recibidos ({pagos?.length ?? 0})</h2>
+        {!pagando && (
+          <button className="btn btn-chico btn-secundario" onClick={() => setPagando('directo')}>
+            + Pago directo (sin cuota)
+          </button>
+        )}
+      </div>
+
+      {pagos && pagos.length > 0 ? (
+        <table className="tabla">
+          <thead>
+            <tr>
+              <th>Fecha</th><th className="der">Monto</th>
+              <th>Tipo</th><th>Forma</th><th>Comprobante</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pagos.map((p) => (
+              <tr key={p.id}>
+                <td>{fechaLegible(p.fecha_pago)}</td>
+                <td className="der"><Plata valor={p.monto} /></td>
+                <td>{p.estado_pago}</td>
+                <td>{p.forma_pago ?? '—'}</td>
+                <td className="mono">{p.numero_comprobante ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="suave">Aún no hay pagos registrados.</p>
+      )}
+    </section>
+  )
+}
+
+// ------------------------------------------------------------
+// Formulario para crear un acuerdo (solo si no hay uno vigente)
+// ------------------------------------------------------------
+
+function FormNuevoAcuerdo({ cobranza, alCrear }: { cobranza: Cobranza; alCrear: () => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const [monto, setMonto] = useState(cobranza.monto_actual)
+  const [pie, setPie] = useState('0')
+  const [cuotas, setCuotas] = useState('6')
+  const [primeraCuota, setPrimeraCuota] = useState('')
+  const [diaPago, setDiaPago] = useState('5')
+  const [error, setError] = useState('')
+
+  const crear = useMutation({
+    mutationFn: async () => {
+      await api.post('/acuerdos/', {
+        cobranza_id: cobranza.id,
+        monto_total_acordado: monto,
+        pie,
+        numero_cuotas: Number(cuotas),
+        fecha_primera_cuota: primeraCuota,
+        dia_pago: Number(diaPago) || null,
+      })
+    },
+    onSuccess: () => { setAbierto(false); alCrear() },
+    onError: (err) => setError(mensajeDeError(err)),
+  })
+
+  if (!abierto) {
+    return (
+      <div>
+        <p className="suave">Esta cobranza no tiene un acuerdo de pago vigente.</p>
+        <button className="btn btn-secundario" onClick={() => setAbierto(true)}>
+          + Crear acuerdo de pago
+        </button>
+      </div>
+    )
+  }
+
+  function alEnviar(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    crear.mutate()
+  }
+
+  return (
+    <form className="form-finanzas" onSubmit={alEnviar}>
+      <div className="fila">
+        <label>
+          Monto total acordado
+          <input type="number" min="1" value={monto} onChange={(e) => setMonto(e.target.value)} required />
+        </label>
+        <label>
+          Pie
+          <input type="number" min="0" value={pie} onChange={(e) => setPie(e.target.value)} />
+        </label>
+        <label>
+          N° de cuotas
+          <input type="number" min="1" max="120" value={cuotas} onChange={(e) => setCuotas(e.target.value)} required />
+        </label>
+      </div>
+      <div className="fila">
+        <label>
+          Primera cuota vence
+          <input type="date" value={primeraCuota} onChange={(e) => setPrimeraCuota(e.target.value)} required />
+        </label>
+        <label>
+          Día de pago (1-31)
+          <input type="number" min="1" max="31" value={diaPago} onChange={(e) => setDiaPago(e.target.value)} />
+        </label>
+      </div>
+      <p className="nota">
+        Las cuotas se generan automáticamente en partes iguales y la cobranza
+        pasa a estado "acuerdo de pago".
+      </p>
+      {error && <div className="alerta-error">{error}</div>}
+      <div className="fila">
+        <button className="btn btn-primario" disabled={crear.isPending}>
+          {crear.isPending ? 'Creando…' : 'Crear acuerdo'}
+        </button>
+        <button type="button" className="btn btn-secundario" onClick={() => setAbierto(false)}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ------------------------------------------------------------
+// Formulario para registrar un pago (de una cuota o directo)
+// ------------------------------------------------------------
+
+function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
+  cobranzaId: string
+  cuota: Cuota | null
+  alTerminar: () => void
+  alCancelar: () => void
+}) {
+  // Si es pago de cuota, precarga lo que falta por pagar de esa cuota.
+  const saldoCuota = cuota
+    ? (Number(cuota.monto) - Number(cuota.monto_pagado)).toFixed(0)
+    : ''
+  const [monto, setMonto] = useState(saldoCuota)
+  const [forma, setForma] = useState('transferencia')
+  const [comprobante, setComprobante] = useState('')
+  const [error, setError] = useState('')
+
+  const pagar = useMutation({
+    mutationFn: async () => {
+      await api.post('/pagos/', {
+        cobranza_id: cobranzaId,
+        cuota_id: cuota?.id ?? null,
+        monto,
+        forma_pago: forma,
+        numero_comprobante: comprobante || null,
+        estado_pago: cuota ? 'cuota' : 'abono',
+      })
+    },
+    onSuccess: alTerminar,
+    onError: (err) => setError(mensajeDeError(err)),
+  })
+
+  function alEnviar(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    pagar.mutate()
+  }
+
+  return (
+    <form className="form-finanzas form-pago" onSubmit={alEnviar}>
+      <h3>
+        {cuota
+          ? `Registrar pago de la cuota ${cuota.numero_cuota}`
+          : 'Registrar pago directo'}
+      </h3>
+      <div className="fila">
+        <label>
+          Monto
+          <input type="number" min="1" value={monto} onChange={(e) => setMonto(e.target.value)} required autoFocus />
+        </label>
+        <label>
+          Forma de pago
+          <select value={forma} onChange={(e) => setForma(e.target.value)}>
+            {FORMAS_PAGO.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </label>
+        <label>
+          N° comprobante
+          <input value={comprobante} onChange={(e) => setComprobante(e.target.value)} placeholder="opcional" />
+        </label>
+      </div>
+      <p className="nota">
+        Los pagos son inmutables. El saldo de la cobranza, la cuota y el
+        acuerdo se actualizan solos.
+      </p>
+      {error && <div className="alerta-error">{error}</div>}
+      <div className="fila">
+        <button className="btn btn-primario" disabled={pagar.isPending}>
+          {pagar.isPending ? 'Registrando…' : 'Registrar pago'}
+        </button>
+        <button type="button" className="btn btn-secundario" onClick={alCancelar}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  )
+}

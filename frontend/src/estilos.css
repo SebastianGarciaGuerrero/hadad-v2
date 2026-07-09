@@ -332,6 +332,45 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   color: var(--ambar);
 }
 
+/* ---------- Finanzas (acuerdo, cuotas, pagos) ---------- */
+
+.finanzas { margin-top: 20px; }
+
+.acuerdo-resumen {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tabla-cuotas { margin-bottom: 8px; }
+
+.finanzas-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.finanzas-pie h2 { margin: 0; }
+
+.form-finanzas {
+  display: flex; flex-direction: column; gap: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.form-finanzas h3 { margin: 0; font-size: 15px; }
+.form-finanzas .fila label { flex: 1; min-width: 140px; }
+.form-finanzas .fila input, .form-finanzas .fila select { width: 100%; }
+.form-finanzas .fila .btn { flex: 0; }
+
 /* ---------- Deudores / contactos ---------- */
 
 .lista-contactos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

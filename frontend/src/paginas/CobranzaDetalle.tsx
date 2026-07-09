@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, mensajeDeError } from '../api/client'
 import type { CobranzaDetalle as Ficha, Gestion, TipoGestion } from '../api/tipos'
 import { EtiquetaEstado, Plata, fechaLegible, fechaHoraLegible } from '../componentes/utiles'
+import Finanzas from '../componentes/Finanzas'
 
 // La pantalla más usada del sistema: la ficha de una cobranza con su
 // historial de gestiones y el formulario para registrar la siguiente.
@@ -166,6 +167,8 @@ export default function CobranzaDetalle() {
           </ul>
         </section>
       </div>
+
+      <Finanzas cobranza={cob} />
     </>
   )
 }

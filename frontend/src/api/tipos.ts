@@ -85,3 +85,48 @@ export interface Gestion {
   fecha_gestion: string
   fecha_proximo_contacto: string | null
 }
+
+export type EstadoAcuerdo = 'vigente' | 'cumplido' | 'incumplido' | 'renegociado'
+export type EstadoCuota = 'pendiente' | 'pagada' | 'vencida' | 'pagada_parcial'
+
+export interface Cuota {
+  id: string
+  acuerdo_id: string
+  numero_cuota: number
+  monto: string
+  fecha_vencimiento: string
+  monto_pagado: string
+  estado: EstadoCuota
+}
+
+export interface Acuerdo {
+  id: string
+  cobranza_id: string
+  estado: EstadoAcuerdo
+  fecha_acuerdo: string | null
+  fecha_termino: string | null
+  pie: string
+  monto_total_acordado: string
+  numero_cuotas: number
+  dia_pago: number | null
+  fecha_primera_cuota: string
+}
+
+export interface AcuerdoDetalle extends Acuerdo {
+  cuotas: Cuota[]
+}
+
+export type FormaPago =
+  | 'transferencia' | 'cheque' | 'efectivo' | 'deposito'
+  | 'flow' | 'presencial' | 'bonificacion' | 'otro'
+
+export interface Pago {
+  id: string
+  cobranza_id: string
+  cuota_id: string | null
+  fecha_pago: string
+  monto: string
+  forma_pago: FormaPago | null
+  numero_comprobante: string | null
+  estado_pago: 'pagado' | 'abono' | 'cuota' | 'bonificacion'
+}
