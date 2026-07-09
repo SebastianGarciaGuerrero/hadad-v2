@@ -51,7 +51,14 @@ body {
   flex: 1;
   padding: 28px 36px;
   max-width: 1200px;
+  display: flex;
+  flex-direction: column;
 }
+
+.contenido > * { flex-shrink: 0; }
+
+/* La firma queda pegada al final del sitio aunque haya poco contenido. */
+.contenido .pie-firma { margin-top: auto; padding-top: 28px; }
 
 /* ---------- Marca ---------- */
 
@@ -330,6 +337,73 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   font-size: 13px;
   font-weight: 600;
   color: var(--ambar);
+}
+
+/* Gestiones importantes (acuerdos, abonos, cuenta saldada): resaltadas
+   para identificarlas rápido al recorrer el historial. */
+.gestion-destacada {
+  border-left-color: var(--verde);
+  background: #f0faf5;
+}
+
+.gestion-destacada .gestion-tipo {
+  color: var(--verde);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.gestion-destacada p { font-weight: 600; }
+
+/* ---------- Acciones de la ficha ---------- */
+
+.separado { margin-top: 24px; }
+
+.acciones { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.acciones .btn { text-align: left; }
+
+.total-abono {
+  font-weight: 700;
+  padding: 9px 0;
+  align-self: end;
+}
+
+/* ---------- Equipo (admin) ---------- */
+
+.equipo-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.lista-tipos { list-style: none; margin: 0; padding: 0; }
+.lista-tipos li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: 14px;
+}
+.lista-tipos li:last-child { border-bottom: none; }
+
+/* ---------- Carga masiva ---------- */
+
+.subir-archivo { cursor: pointer; }
+
+.resultado-carga {
+  background: #f8fafc;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.resultado-carga p { margin: 0 0 6px; }
+
+.lista-errores {
+  margin: 0; padding-left: 18px;
+  font-size: 13px;
+  color: var(--rojo);
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 /* ---------- Finanzas (acuerdo, cuotas, pagos) ---------- */

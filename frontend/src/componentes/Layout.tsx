@@ -25,6 +25,9 @@ export default function Layout() {
           <NavLink to="/cobranzas">📁 Cobranzas</NavLink>
           <NavLink to="/deudores">👤 Deudores</NavLink>
           <NavLink to="/informes">📊 Informes</NavLink>
+          {usuario.rol_id === 1 && (
+            <NavLink to="/equipo">👥 Equipo</NavLink>
+          )}
         </nav>
 
         <div className="sidebar-pie">

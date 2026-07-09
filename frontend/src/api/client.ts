@@ -25,6 +25,19 @@ api.interceptors.response.use(
   },
 )
 
+/** Descarga un archivo del backend (Excel/Word) respetando el token. */
+export async function descargarArchivo(ruta: string, params?: Record<string, string>) {
+  const res = await api.get(ruta, { params, responseType: 'blob' })
+  const disposicion: string = res.headers['content-disposition'] ?? ''
+  const nombre = /filename="?([^";]+)"?/.exec(disposicion)?.[1] ?? 'archivo'
+  const url = URL.createObjectURL(res.data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombre
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /** Extrae un mensaje legible del error de la API (detail de FastAPI). */
 export function mensajeDeError(error: unknown): string {
   if (axios.isAxiosError(error)) {

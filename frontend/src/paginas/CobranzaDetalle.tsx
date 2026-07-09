@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, mensajeDeError } from '../api/client'
+import { api, mensajeDeError, descargarArchivo } from '../api/client'
 import type { CobranzaDetalle as Ficha, Gestion, TipoGestion } from '../api/tipos'
 import { EtiquetaEstado, Plata, fechaLegible, fechaHoraLegible } from '../componentes/utiles'
 import Finanzas from '../componentes/Finanzas'
@@ -29,10 +29,9 @@ export default function CobranzaDetalle() {
     queryFn: async () => (await api.get<TipoGestion[]>('/gestiones/tipos')).data,
   })
 
-  // --- Formulario de nueva gestión ---
+  // --- Formulario de nueva gestión (mínimo: para gestiones rápidas) ---
   const [tipoId, setTipoId] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [proximoContacto, setProximoContacto] = useState('')
   const [error, setError] = useState('')
 
   const crearGestion = useMutation({
@@ -42,12 +41,10 @@ export default function CobranzaDetalle() {
         descripcion,
       }
       if (tipoId) cuerpo.tipo_id = Number(tipoId)
-      if (proximoContacto) cuerpo.fecha_proximo_contacto = proximoContacto
       await api.post('/gestiones/', cuerpo)
     },
     onSuccess: () => {
       setDescripcion('')
-      setProximoContacto('')
       setError('')
       cliente.invalidateQueries({ queryKey: ['gestiones', id] })
     },
@@ -58,6 +55,10 @@ export default function CobranzaDetalle() {
 
   const nombreTipo = (tipo_id: number | null) =>
     tipos?.find((t) => t.id === tipo_id)?.nombre ?? 'Gestión'
+
+  // Gestiones que deben saltar a la vista al recorrer el historial.
+  const esDestacada = (tipo_id: number | null) =>
+    ['Acuerdo de pago', 'Pagado', 'Abono'].includes(nombreTipo(tipo_id))
 
   return (
     <>
@@ -76,6 +77,8 @@ export default function CobranzaDetalle() {
         <section className="tarjeta">
           <h2>Datos del caso</h2>
           <dl className="datos">
+            <dt>N° cobranza</dt>
+            <dd className="mono negrita">{cob.numero}</dd>
             <dt>Deudor</dt>
             <dd>
               <strong>{cob.deudor?.nombre ?? '—'}</strong>
@@ -87,7 +90,7 @@ export default function CobranzaDetalle() {
               {cob.cliente?.nombre_fantasia ?? cob.cliente?.razon_social ?? '—'}
               {cob.filial && <span className="suave"> · {cob.filial.nombre}</span>}
             </dd>
-            <dt>ID clínica</dt>
+            <dt>ID cliente</dt>
             <dd className="mono">{cob.id_clinica ?? '—'}</dd>
             <dt>Deuda original</dt>
             <dd><Plata valor={cob.monto_original} /></dd>
@@ -101,6 +104,22 @@ export default function CobranzaDetalle() {
           {cob.observaciones && (
             <p className="observaciones">{cob.observaciones}</p>
           )}
+
+          <h2 className="separado">Acciones</h2>
+          <div className="acciones">
+            <button
+              className="btn btn-secundario"
+              onClick={() => descargarArchivo(`/documentos/informe-gestiones/${cob.id}`)}
+            >
+              📄 Informe de gestiones (Word)
+            </button>
+            <button
+              className="btn btn-secundario"
+              onClick={() => descargarArchivo(`/documentos/estado-cuenta/${cob.id}`)}
+            >
+              📄 Estado de cuenta (Word)
+            </button>
+          </div>
         </section>
 
         {/* Columna derecha: gestiones */}
@@ -113,22 +132,12 @@ export default function CobranzaDetalle() {
               crearGestion.mutate()
             }}
           >
-            <div className="fila">
-              <select value={tipoId} onChange={(e) => setTipoId(e.target.value)} required>
-                <option value="">Tipo de gestión…</option>
-                {tipos?.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                ))}
-              </select>
-              <label className="proximo">
-                Próximo contacto
-                <input
-                  type="date"
-                  value={proximoContacto}
-                  onChange={(e) => setProximoContacto(e.target.value)}
-                />
-              </label>
-            </div>
+            <select value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
+              <option value="">Tipo de gestión (opcional)</option>
+              {tipos?.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </select>
             <textarea
               placeholder="¿Qué pasó? Ej: Llamada a don Pedro, se compromete a pagar el día 5…"
               value={descripcion}
@@ -148,7 +157,7 @@ export default function CobranzaDetalle() {
           <h2>Historial ({gestiones?.length ?? 0})</h2>
           <ul className="linea-tiempo">
             {gestiones?.map((g) => (
-              <li key={g.id}>
+              <li key={g.id} className={esDestacada(g.tipo_id) ? 'gestion-destacada' : ''}>
                 <div className="gestion-cabecera">
                   <span className="gestion-tipo">{nombreTipo(g.tipo_id)}</span>
                   <span className="suave">{fechaHoraLegible(g.fecha_gestion)}</span>

@@ -204,12 +204,12 @@ def exportar_recupero(
     filas = db.execute(text(sql), params).mappings().all()
 
     encabezados = [
-        "Fecha pago", "N° Hadad", "ID clínica", "Cliente", "Filial",
+        "Fecha pago", "N° Hadad", "ID cliente", "Cliente", "Filial",
         "Deudor", "RUT deudor", "Total recibido", "Capital clínica",
-        "Honorarios Hadad", "Interés clínica", "Estado", "Forma de pago",
-        "N° comprobante", "Cuota", "Registrado por",
+        "Honorarios Hadad", "Interés clínica", "Gastos judiciales",
+        "Estado", "Forma de pago", "N° comprobante", "Cuota", "Registrado por",
     ]
-    anchos = [12, 10, 12, 16, 14, 30, 13, 14, 14, 15, 13, 12, 14, 16, 8, 20]
+    anchos = [12, 10, 12, 16, 14, 30, 13, 14, 14, 15, 13, 15, 12, 14, 16, 8, 20]
     wb, ws = _hoja_con_encabezados(f"Recupero {mes:02d}-{anio}", encabezados, anchos)
 
     for i, r in enumerate(filas, start=2):
@@ -221,21 +221,22 @@ def exportar_recupero(
         ws.cell(row=i, column=6, value=r["deudor"])
         ws.cell(row=i, column=7, value=r["rut_deudor"])
         for col, campo in [(8, "total_recibido"), (9, "capital_clinica"),
-                           (10, "honorarios_hadad"), (11, "interes_clinica")]:
+                           (10, "honorarios_hadad"), (11, "interes_clinica"),
+                           (12, "gastos_judiciales")]:
             ws.cell(row=i, column=col, value=r[campo]).number_format = FORMATO_PESOS
-        ws.cell(row=i, column=12, value=r["estado_pago"])
-        ws.cell(row=i, column=13, value=r["forma_pago"])
-        ws.cell(row=i, column=14, value=r["numero_comprobante"])
+        ws.cell(row=i, column=13, value=r["estado_pago"])
+        ws.cell(row=i, column=14, value=r["forma_pago"])
+        ws.cell(row=i, column=15, value=r["numero_comprobante"])
         if r["numero_cuota"]:
-            ws.cell(row=i, column=15,
+            ws.cell(row=i, column=16,
                     value=f'{r["numero_cuota"]}/{r["total_cuotas_acuerdo"]}')
-        ws.cell(row=i, column=16, value=r["registrado_por"])
+        ws.cell(row=i, column=17, value=r["registrado_por"])
 
     # Fila de totales al final (suma en Excel, se recalcula sola).
     if filas:
         tot = len(filas) + 2
         ws.cell(row=tot, column=7, value="TOTALES").font = Font(bold=True)
-        for col in (8, 9, 10, 11):
+        for col in (8, 9, 10, 11, 12):
             letra = get_column_letter(col)
             celda = ws.cell(row=tot, column=col, value=f"=SUM({letra}2:{letra}{tot-1})")
             celda.font = Font(bold=True)

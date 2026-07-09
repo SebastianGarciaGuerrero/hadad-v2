@@ -31,8 +31,25 @@ from app.security import get_current_user, usuario_autorizado
 from app.models.pago import Pago
 from app.models.cobranza import Cobranza
 from app.models.acuerdo import Cuota, AcuerdoPago
+from app.models.gestion import Gestion, TipoGestion
 from app.models.usuario import Usuario
 from app.schemas.pago import PagoCreate, PagoResponse
+
+
+def _clp(valor) -> str:
+    """Formatea un monto como pesos chilenos: $1.234.567."""
+    return "$" + f"{int(valor):,}".replace(",", ".")
+
+
+def _gestion_automatica(db: Session, cobranza_id, usuario_id, nombre_tipo: str, descripcion: str):
+    """Registra una gestión automática (ej. Abono, Pagado) en el historial."""
+    tipo = db.query(TipoGestion).filter(TipoGestion.nombre == nombre_tipo).first()
+    db.add(Gestion(
+        cobranza_id=cobranza_id,
+        usuario_id=usuario_id,
+        tipo_id=tipo.id if tipo else None,
+        descripcion=descripcion,
+    ))
 
 
 # dependencies=[...] exige token válido en TODOS los endpoints del router
@@ -123,12 +140,18 @@ def registrar_pago(
     db.add(nuevo_pago)
 
     monto = Decimal(pago_data.monto)
+    capital = Decimal(pago_data.capital_clinica)
 
     # 1. Descontar del saldo de la cobranza (sin bajar de 0).
-    saldo = Decimal(cobranza.monto_actual) - monto
+    # REGLA: si el pago viene con desglose, SOLO el capital descuenta el
+    # saldo (el capital es la guía; honorarios/interés/gastos varían con la
+    # UF del día). Sin desglose, descuenta el monto total.
+    descuento = capital if capital > 0 else monto
+    saldo = Decimal(cobranza.monto_actual) - descuento
     cobranza.monto_actual = saldo if saldo > 0 else Decimal("0")
 
     # 2. Si el pago es de una cuota, actualizar su monto_pagado y estado.
+    #    La cuota se mide contra el monto TOTAL pagado (lo comprometido).
     if cuota is not None:
         cuota.monto_pagado = Decimal(cuota.monto_pagado) + monto
         if cuota.monto_pagado >= Decimal(cuota.monto):
@@ -145,6 +168,30 @@ def registrar_pago(
     # 4. Si el saldo llegó a 0, la cobranza está pagada (cubre pago directo).
     if cobranza.monto_actual == 0:
         cobranza.estado = "pagada"
+
+    # 5. Dejar rastro en el historial de gestiones (automático).
+    partes = [f"total {_clp(monto)}"]
+    if capital > 0:
+        partes.append(f"capital {_clp(capital)}")
+    if pago_data.honorarios_hadad > 0:
+        partes.append(f"honorarios {_clp(pago_data.honorarios_hadad)}")
+    if pago_data.interes_clinica > 0:
+        partes.append(f"interés {_clp(pago_data.interes_clinica)}")
+    if pago_data.gastos_judiciales > 0:
+        partes.append(f"gastos judiciales {_clp(pago_data.gastos_judiciales)}")
+    encabezado = (
+        f"PAGO CUOTA {cuota.numero_cuota}" if cuota is not None else "ABONO"
+    )
+    _gestion_automatica(
+        db, cobranza.id, usuario.id, "Abono",
+        f"{encabezado}: {', '.join(partes)}. "
+        f"Saldo capital restante: {_clp(cobranza.monto_actual)}."
+    )
+    if cobranza.estado == "pagada":
+        _gestion_automatica(
+            db, cobranza.id, usuario.id, "Pagado",
+            "CUENTA SALDADA. La cobranza queda en estado pagada."
+        )
 
     try:
         db.commit()

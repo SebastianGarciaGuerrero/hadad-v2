@@ -6,6 +6,7 @@ import Cobranzas from './paginas/Cobranzas'
 import CobranzaDetalle from './paginas/CobranzaDetalle'
 import Deudores from './paginas/Deudores'
 import Informes from './paginas/Informes'
+import Equipo from './paginas/Equipo'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/cobranzas/:id" element={<CobranzaDetalle />} />
             <Route path="/deudores" element={<Deudores />} />
             <Route path="/informes" element={<Informes />} />
+            <Route path="/equipo" element={<Equipo />} />
           </Route>
         </Routes>
       </BrowserRouter>

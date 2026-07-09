@@ -34,10 +34,13 @@ class Pago(Base):
     fecha_pago = Column(Date, nullable=False, server_default=text("CURRENT_DATE"))
     monto = Column(Numeric(15, 2), nullable=False)
 
-    # Desglose para el cuadro de rendición.
+    # Desglose para el cuadro de rendición. El CAPITAL es la guía: es lo
+    # único que descuenta el saldo de la cobranza (honorarios/interés varían
+    # según el abono y la UF del día, el capital siempre es fijo).
     capital_clinica = Column(Numeric(15, 2), server_default=text("0"))
     honorarios_hadad = Column(Numeric(15, 2), server_default=text("0"))
     interes_clinica = Column(Numeric(15, 2), server_default=text("0"))
+    gastos_judiciales = Column(Numeric(15, 2), server_default=text("0"))
 
     forma_pago = Column(String(30))
     numero_comprobante = Column(String(100))

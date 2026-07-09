@@ -126,7 +126,22 @@ export interface Pago {
   cuota_id: string | null
   fecha_pago: string
   monto: string
+  capital_clinica: string
+  honorarios_hadad: string
+  interes_clinica: string
+  gastos_judiciales: string
   forma_pago: FormaPago | null
   numero_comprobante: string | null
   estado_pago: 'pagado' | 'abono' | 'cuota' | 'bonificacion'
+}
+
+export interface ReporteUsuario {
+  usuario_id: string
+  nombre: string
+  activo: boolean
+  gestiones_total: number
+  gestiones_por_tipo: Record<string, number>
+  acuerdos_creados: number
+  pagos_ingresados: number
+  monto_pagos: string
 }

@@ -28,6 +28,7 @@ from app.database import get_db
 from app.security import get_current_user, usuario_autorizado
 from app.models.acuerdo import AcuerdoPago, Cuota
 from app.models.cobranza import Cobranza
+from app.models.gestion import Gestion, TipoGestion
 from app.models.usuario import Usuario
 from app.schemas.acuerdo import (
     AcuerdoCreate,
@@ -172,6 +173,32 @@ def crear_acuerdo(
 
     # 5. La cobranza pasa a 'acuerdo_pago'.
     cobranza.estado = "acuerdo_pago"
+
+    # 6. Registrar el acuerdo en el historial de gestiones (automático),
+    #    con los términos para identificarlo rápido al revisar el historial.
+    def clp(v):
+        return "$" + f"{int(v):,}".replace(",", ".")
+
+    cuota_ejemplo = nuevo_acuerdo.cuotas[0].monto
+    detalle = (
+        f"ACUERDO DE PAGO: {clp(nuevo_acuerdo.monto_total_acordado)} en "
+        f"{nuevo_acuerdo.numero_cuotas} cuota(s) de {clp(cuota_ejemplo)}"
+    )
+    if Decimal(nuevo_acuerdo.pie or 0) > 0:
+        detalle += f", pie de {clp(nuevo_acuerdo.pie)}"
+    detalle += (
+        f". Primera cuota vence el {nuevo_acuerdo.fecha_primera_cuota.strftime('%d-%m-%Y')}"
+        f", última el {nuevo_acuerdo.fecha_termino.strftime('%d-%m-%Y')}."
+    )
+    tipo_acuerdo = db.query(TipoGestion).filter(
+        TipoGestion.nombre == "Acuerdo de pago"
+    ).first()
+    db.add(Gestion(
+        cobranza_id=cobranza.id,
+        usuario_id=usuario.id,
+        tipo_id=tipo_acuerdo.id if tipo_acuerdo else None,
+        descripcion=detalle,
+    ))
 
     try:
         db.add(nuevo_acuerdo)

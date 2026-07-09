@@ -305,7 +305,9 @@ INSERT INTO tipos_gestion (nombre) VALUES
     ('Cobranza ingresada al sistema'),
     ('Demanda presentada'),
     ('Pagaré ejecutado'),
-    ('Acuerdo incumplido');
+    ('Acuerdo incumplido'),
+    ('Abono'),
+    ('Pagado');
 
 -- ============================================================
 -- [11] GESTIONES
@@ -442,9 +444,12 @@ CREATE TABLE pagos (
     monto               NUMERIC(15,2) NOT NULL,
 
     -- Desglose del pago (para cuadro de rendición)
+    -- El CAPITAL es la guía: es lo único que descuenta el saldo de la
+    -- cobranza. Honorarios/interés varían según el abono y la UF del día.
     capital_clinica     NUMERIC(15,2) DEFAULT 0,
     honorarios_hadad    NUMERIC(15,2) DEFAULT 0,
     interes_clinica     NUMERIC(15,2) DEFAULT 0,
+    gastos_judiciales   NUMERIC(15,2) DEFAULT 0,
 
     -- Forma de pago
     forma_pago          VARCHAR(30)
@@ -629,7 +634,8 @@ SELECT
     p.numero_comprobante,
     cu.numero_cuota,
     ap.numero_cuotas                        AS total_cuotas_acuerdo,
-    u.nombre                                AS registrado_por
+    u.nombre                                AS registrado_por,
+    p.gastos_judiciales
 FROM pagos p
 JOIN cobranzas c    ON c.id = p.cobranza_id
 JOIN clientes cl    ON cl.id = c.cliente_id

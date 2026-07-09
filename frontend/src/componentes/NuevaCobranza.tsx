@@ -153,9 +153,9 @@ export default function NuevaCobranza() {
             onChange={(e) => setMonto(e.target.value)} required />
         </label>
         <label>
-          ID clínica
+          ID cliente
           <input value={idClinica} onChange={(e) => setIdClinica(e.target.value)}
-            placeholder="N° del sistema de la clínica" />
+            placeholder="N° interno del cliente (SAP, HIS…)" />
         </label>
         <label>
           Previsión

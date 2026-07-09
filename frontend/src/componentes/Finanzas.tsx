@@ -147,7 +147,7 @@ export default function Finanzas({ cobranza }: { cobranza: Cobranza }) {
         <h2>Pagos recibidos ({pagos?.length ?? 0})</h2>
         {!pagando && (
           <button className="btn btn-chico btn-secundario" onClick={() => setPagando('directo')}>
-            + Pago directo (sin cuota)
+            + Registrar abono
           </button>
         )}
       </div>
@@ -156,7 +156,8 @@ export default function Finanzas({ cobranza }: { cobranza: Cobranza }) {
         <table className="tabla">
           <thead>
             <tr>
-              <th>Fecha</th><th className="der">Monto</th>
+              <th>Fecha</th><th className="der">Total</th>
+              <th className="der">Capital</th><th className="der">Honorarios</th>
               <th>Tipo</th><th>Forma</th><th>Comprobante</th>
             </tr>
           </thead>
@@ -165,6 +166,8 @@ export default function Finanzas({ cobranza }: { cobranza: Cobranza }) {
               <tr key={p.id}>
                 <td>{fechaLegible(p.fecha_pago)}</td>
                 <td className="der"><Plata valor={p.monto} /></td>
+                <td className="der"><Plata valor={p.capital_clinica} /></td>
+                <td className="der"><Plata valor={p.honorarios_hadad} /></td>
                 <td>{p.estado_pago}</td>
                 <td>{p.forma_pago ?? '—'}</td>
                 <td className="mono">{p.numero_comprobante ?? '—'}</td>
@@ -277,21 +280,30 @@ function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
   alTerminar: () => void
   alCancelar: () => void
 }) {
-  // Si es pago de cuota, precarga lo que falta por pagar de esa cuota.
-  const saldoCuota = cuota
-    ? (Number(cuota.monto) - Number(cuota.monto_pagado)).toFixed(0)
-    : ''
-  const [monto, setMonto] = useState(saldoCuota)
+  // Desglose del abono. El CAPITAL es la guía: es lo único que descuenta
+  // el saldo. Honorarios varían según el abono y la UF del día.
+  const [capital, setCapital] = useState('')
+  const [honorarios, setHonorarios] = useState('')
+  const [interes, setInteres] = useState('')
+  const [gastos, setGastos] = useState('')
   const [forma, setForma] = useState('transferencia')
   const [comprobante, setComprobante] = useState('')
   const [error, setError] = useState('')
+
+  const total =
+    (Number(capital) || 0) + (Number(honorarios) || 0) +
+    (Number(interes) || 0) + (Number(gastos) || 0)
 
   const pagar = useMutation({
     mutationFn: async () => {
       await api.post('/pagos/', {
         cobranza_id: cobranzaId,
         cuota_id: cuota?.id ?? null,
-        monto,
+        monto: String(total),
+        capital_clinica: capital || '0',
+        honorarios_hadad: honorarios || '0',
+        interes_clinica: interes || '0',
+        gastos_judiciales: gastos || '0',
         forma_pago: forma,
         numero_comprobante: comprobante || null,
         estado_pago: cuota ? 'cuota' : 'abono',
@@ -312,13 +324,31 @@ function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
       <h3>
         {cuota
           ? `Registrar pago de la cuota ${cuota.numero_cuota}`
-          : 'Registrar pago directo'}
+          : 'Registrar abono'}
       </h3>
       <div className="fila">
         <label>
-          Monto
-          <input type="number" min="1" value={monto} onChange={(e) => setMonto(e.target.value)} required autoFocus />
+          Capital *
+          <input type="number" min="1" value={capital}
+            onChange={(e) => setCapital(e.target.value)} required autoFocus />
         </label>
+        <label>
+          Honorarios *
+          <input type="number" min="0" value={honorarios}
+            onChange={(e) => setHonorarios(e.target.value)} required />
+        </label>
+        <label>
+          Interés
+          <input type="number" min="0" value={interes}
+            onChange={(e) => setInteres(e.target.value)} placeholder="opcional" />
+        </label>
+        <label>
+          Gastos judiciales
+          <input type="number" min="0" value={gastos}
+            onChange={(e) => setGastos(e.target.value)} placeholder="opcional" />
+        </label>
+      </div>
+      <div className="fila">
         <label>
           Forma de pago
           <select value={forma} onChange={(e) => setForma(e.target.value)}>
@@ -329,15 +359,18 @@ function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
           N° comprobante
           <input value={comprobante} onChange={(e) => setComprobante(e.target.value)} placeholder="opcional" />
         </label>
+        <div className="total-abono">
+          Total: <Plata valor={total} />
+        </div>
       </div>
       <p className="nota">
-        Los pagos son inmutables. El saldo de la cobranza, la cuota y el
-        acuerdo se actualizan solos.
+        Solo el CAPITAL descuenta el saldo de la cobranza. El pago queda en el
+        recupero del mes automáticamente y deja una gestión en el historial.
       </p>
       {error && <div className="alerta-error">{error}</div>}
       <div className="fila">
-        <button className="btn btn-primario" disabled={pagar.isPending}>
-          {pagar.isPending ? 'Registrando…' : 'Registrar pago'}
+        <button className="btn btn-primario" disabled={pagar.isPending || total <= 0}>
+          {pagar.isPending ? 'Registrando…' : `Registrar ${cuota ? 'pago' : 'abono'}`}
         </button>
         <button type="button" className="btn btn-secundario" onClick={alCancelar}>
           Cancelar

@@ -36,6 +36,7 @@ class PagoBase(BaseModel):
     capital_clinica: Decimal = Field(Decimal("0"), ge=0, max_digits=15, decimal_places=2)
     honorarios_hadad: Decimal = Field(Decimal("0"), ge=0, max_digits=15, decimal_places=2)
     interes_clinica: Decimal = Field(Decimal("0"), ge=0, max_digits=15, decimal_places=2)
+    gastos_judiciales: Decimal = Field(Decimal("0"), ge=0, max_digits=15, decimal_places=2)
 
     forma_pago: Optional[FormaPago] = None
     numero_comprobante: Optional[str] = Field(None, max_length=100)
@@ -50,11 +51,12 @@ class PagoCreate(PagoBase):
     @model_validator(mode="after")
     def _validar_desglose(self):
         """Si se informó desglose, la suma debe igualar el monto total."""
-        suma = self.capital_clinica + self.honorarios_hadad + self.interes_clinica
+        suma = (self.capital_clinica + self.honorarios_hadad
+                + self.interes_clinica + self.gastos_judiciales)
         if suma > 0 and suma != self.monto:
             raise ValueError(
-                f"El desglose (capital + honorarios + interés = {suma}) debe "
-                f"sumar exactamente el monto del pago ({self.monto})."
+                f"El desglose (capital + honorarios + interés + gastos = {suma}) "
+                f"debe sumar exactamente el monto del pago ({self.monto})."
             )
         return self
 

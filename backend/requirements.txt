@@ -17,5 +17,8 @@ python-jose[cryptography]==3.3.0
 bcrypt==5.0.0
 python-multipart==0.0.12
 
-# Excel (para imports/exports más adelante)
+# Excel (imports/exports)
 openpyxl==3.1.5
+
+# Word (informes de deudor y estado de cuenta)
+python-docx==1.1.2

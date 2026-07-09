@@ -28,6 +28,9 @@ from app.routers import acuerdos
 from app.routers import pagos
 from app.routers import judicial
 from app.routers import exportar
+from app.routers import documentos
+from app.routers import importar
+from app.routers import reportes
 from app.routers import auditoria as auditoria_router
 
 
@@ -50,6 +53,9 @@ app.include_router(acuerdos.router)
 app.include_router(pagos.router)
 app.include_router(judicial.router)
 app.include_router(exportar.router)
+app.include_router(documentos.router)
+app.include_router(importar.router)
+app.include_router(reportes.router)
 app.include_router(auditoria_router.router)
 
 
