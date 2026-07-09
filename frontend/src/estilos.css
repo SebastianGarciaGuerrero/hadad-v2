@@ -371,6 +371,47 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 .form-finanzas .fila input, .form-finanzas .fila select { width: 100%; }
 .form-finanzas .fila .btn { flex: 0; }
 
+/* ---------- Formularios de alta ---------- */
+
+.alta-zona { margin-bottom: 16px; }
+
+.form-alta { max-width: 760px; }
+
+.fila-contacto { margin-bottom: 8px; }
+.fila-contacto input { flex: 1; }
+
+.deudor-elegido {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  background: #eef4fb;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.sugerencias {
+  list-style: none;
+  margin: 4px 0 0; padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.sugerencias button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sugerencias li + li button { border-top: 1px solid var(--borde); }
+.sugerencias button:hover { background: #f0f5fa; }
+
 /* ---------- Deudores / contactos ---------- */
 
 .lista-contactos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

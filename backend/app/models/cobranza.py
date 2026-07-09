@@ -16,7 +16,7 @@ Un mismo deudor puede tener N cobranzas (deudas distintas).
 
 from sqlalchemy import (
     Column, String, Boolean, Text, Date, Integer, Numeric,
-    TIMESTAMP, ForeignKey, UniqueConstraint, text
+    TIMESTAMP, ForeignKey, UniqueConstraint, Identity, text
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -33,8 +33,9 @@ class Cobranza(Base):
         server_default=text("gen_random_uuid()")
     )
     # numero lo genera PostgreSQL (GENERATED ALWAYS AS IDENTITY).
-    # No se incluye en INSERT ni en UPDATE; solo se lee.
-    numero = Column(Integer, nullable=False, unique=True)
+    # Identity(always=True) le dice a SQLAlchemy que NO lo incluya en el
+    # INSERT (sin esto, Postgres rechaza el insert con GeneratedAlways).
+    numero = Column(Integer, Identity(always=True), nullable=False, unique=True)
 
     # --- Vínculos principales ---
     cliente_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=False)

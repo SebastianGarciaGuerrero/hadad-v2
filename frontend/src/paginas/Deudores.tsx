@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Deudor, DeudorDetalle } from '../api/tipos'
+import NuevoDeudor from '../componentes/NuevoDeudor'
 
 const ICONO_CONTACTO: Record<string, string> = {
   telefono: '☎️', celular: '📱', email: '✉️', whatsapp: '💬', otro: '📎',
@@ -36,6 +37,10 @@ export default function Deudores() {
       <header className="pagina-cabecera">
         <h1>Deudores</h1>
       </header>
+
+      <div className="alta-zona">
+        <NuevoDeudor />
+      </div>
 
       <div className="filtros">
         <input
