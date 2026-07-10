@@ -4,12 +4,14 @@ Arquitectura: **una sola URL** — el backend FastAPI sirve también el frontend
 compilado (por eso no usamos Vercel: acá hay Python + PostgreSQL, no solo
 archivos estáticos).
 
-- **Render** (plan gratuito) → corre la aplicación (Docker).
-- **Neon** (plan gratuito) → la base de datos PostgreSQL.
+La base de datos va SIEMPRE en **Neon** (Paso 1 y 2). Para la aplicación hay
+tres opciones — elige la primera que tengas disponible:
 
-> Nota del plan gratuito de Render: el servicio "se duerme" tras ~15 min sin
-> visitas y la primera visita después tarda ~1 minuto en despertar. Para una
-> demo está perfecto.
+| Opción | Costo | Nota |
+|---|---|---|
+| A. Hugging Face Spaces | Gratis para siempre, sin tarjeta | El código del Space queda visible públicamente |
+| B. Railway | Crédito de prueba (~US$5, dura ~1 mes) | Solo si nunca la usaste |
+| C. Render | Plan free | Solo si tu cuenta lo permite |
 
 ## Paso 1 — Base de datos en Neon (5 min)
 
@@ -37,21 +39,46 @@ González, cobranzas de ejemplo) y los usuarios:
 | sgg@hadad.cl | sebastian | admin |
 | grv@hadad.cl | giselle | operadora |
 
-## Paso 3 — Aplicación en Render (10 min)
+## Paso 3, opción A — Hugging Face Spaces (gratis, sin tarjeta)
 
-1. Crear cuenta en https://render.com (entrar con GitHub).
-2. **New → Blueprint** y elegir el repo `hadad-v2` (Render pide permiso para
-   ver tus repos privados). Render lee el `render.yaml` del repo y propone el
-   servicio ya configurado.
-3. Cuando pida `DATABASE_URL`, pegar la URL de Neon del Paso 1.
-4. Deploy. La primera compilación tarda unos minutos (construye el frontend
-   y la imagen de Python).
-5. Al terminar tendrás una URL tipo `https://hadad-v2.onrender.com` —
-   esa es la que le mandas a Giselle. 🎉
+1. Crear cuenta en https://huggingface.co (gratis, sin tarjeta).
+2. Arriba a la derecha: **New → Space**. Nombre: `hadad-demo`,
+   License: ninguna, SDK: **Docker** (plantilla Blank), visibilidad
+   **Public** (los Spaces privados no los puede abrir Giselle sin cuenta).
+3. En el Space: **Settings → Variables and secrets** → agregar dos *Secrets*:
+   - `DATABASE_URL` = la URL de Neon del Paso 1
+   - `SECRET_KEY` = cualquier texto largo aleatorio (ej. 40 letras al azar)
+4. Desde tu PC, en la carpeta del proyecto, subir el código al Space:
+   ```powershell
+   git remote add hf https://huggingface.co/spaces/TU_USUARIO/hadad-demo
+   git push hf main
+   ```
+   (te pedirá usuario y un token de HF: se crea en Settings → Access Tokens,
+   tipo Write). El README del repo ya trae los metadatos que el Space necesita.
+5. El Space compila la imagen (unos minutos) y queda en
+   `https://TU_USUARIO-hadad-demo.hf.space` — esa URL le mandas a Giselle. 🎉
+6. Para actualizar la demo: `git push hf main` después de cada cambio.
 
-## Actualizar la demo
+> ⚠️ El código del Space público es visible para cualquiera. No hay
+> credenciales en el código (van en Secrets), y los datos son de práctica,
+> así que para una demo está bien. Para producción real: VPS propio (Hito 5).
 
-Cada `git push` a `main` redespliega solo (Render vigila el repo).
+## Paso 3, opción B — Railway (si nunca la usaste)
+
+1. Crear cuenta en https://railway.app (entrar con GitHub). El plan de prueba
+   regala ~US$5 de crédito.
+2. **New Project → Deploy from GitHub repo** → elegir `hadad-v2`.
+   Railway detecta el `Dockerfile` solo.
+3. En el servicio → **Variables**: agregar `DATABASE_URL` (la URL de Neon)
+   y `SECRET_KEY` (texto largo aleatorio).
+4. **Settings → Networking → Generate Domain** para obtener la URL pública.
+5. Cada `git push` a `main` redespliega solo.
+
+## Paso 3, opción C — Render
+
+1. https://render.com → **New → Blueprint** → repo `hadad-v2` (lee el
+   `render.yaml` del repo). Pegar `DATABASE_URL` cuando lo pida. Deploy.
+2. El plan free "duerme" tras ~15 min sin visitas (despierta en ~1 min).
 
 ## Si algo falla
 

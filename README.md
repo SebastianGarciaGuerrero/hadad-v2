@@ -1,3 +1,13 @@
+---
+title: Hadad 2.0 Demo
+emoji: 📁
+colorFrom: gray
+colorTo: gray
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # Hadad 2.0
 
 Sistema de cobranza extrajudicial y judicial para González & Hadad Profesionales Asociados.
