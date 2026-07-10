@@ -44,14 +44,18 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 COLUMNAS = [
     "RUT deudor*", "Nombre deudor*", "Teléfono", "Email",
     "Cliente*", "Filial", "ID cliente", "Monto deuda*",
+    "Tipo documento (pagare/factura/letra/cheque/otro)", "N° documento",
     "Fecha atención (AAAA-MM-DD)", "Previsión", "Observaciones",
 ]
 
 EJEMPLO = [
     "12345678-9", "Juan Pérez Soto", "+56 9 1234 5678", "juan@correo.cl",
     "Redsalud", "Valparaíso", "155001", 450000,
+    "pagare", "PG-4521",
     "2026-05-12", "FONASA", "Ingresado por carga masiva",
 ]
+
+TIPOS_DOCUMENTO = {"pagare", "factura", "letra", "cheque", "otro"}
 
 
 @router.get("/plantilla")
@@ -67,7 +71,7 @@ def descargar_plantilla():
         celda.fill = fill
     for col, valor in enumerate(EJEMPLO, start=1):
         ws.cell(row=2, column=col, value=valor)
-    for col, ancho in enumerate([14, 26, 18, 24, 14, 14, 12, 12, 24, 12, 30], start=1):
+    for col, ancho in enumerate([14, 26, 18, 24, 14, 14, 12, 12, 22, 14, 24, 12, 30], start=1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = ancho
     ws.freeze_panes = "A2"
 
@@ -142,9 +146,11 @@ async def importar_cobranzas(
         nombre_filial = _texto(fila[5])
         id_cliente = _texto(fila[6])
         monto_crudo = fila[7]
-        fecha_atencion = fila[8]
-        prevision = _texto(fila[9]) if len(fila) > 9 else ""
-        observaciones = _texto(fila[10]) if len(fila) > 10 else ""
+        tipo_documento = _texto(fila[8]).lower() if len(fila) > 8 else ""
+        numero_documento = _texto(fila[9]) if len(fila) > 9 else ""
+        fecha_atencion = fila[10] if len(fila) > 10 else None
+        prevision = _texto(fila[11]) if len(fila) > 11 else ""
+        observaciones = _texto(fila[12]) if len(fila) > 12 else ""
 
         try:
             # --- Validaciones ---
@@ -161,6 +167,11 @@ async def importar_cobranzas(
                     raise InvalidOperation
             except (InvalidOperation, TypeError):
                 raise ValueError(f"Monto inválido: {monto_crudo!r}")
+            if tipo_documento and tipo_documento not in TIPOS_DOCUMENTO:
+                raise ValueError(
+                    f"Tipo de documento inválido: '{tipo_documento}' "
+                    f"(usar: {', '.join(sorted(TIPOS_DOCUMENTO))})"
+                )
 
             filial = None
             if nombre_filial:
@@ -206,6 +217,8 @@ async def importar_cobranzas(
                 id_clinica=id_cliente or None,
                 monto_original=monto,
                 monto_actual=monto,
+                tipo_documento=tipo_documento or "pagare",
+                numero_pagare=numero_documento or None,
                 fecha_atencion=fecha,
                 prevision=prevision or None,
                 observaciones=observaciones or None,

@@ -29,6 +29,7 @@ EstadoCobranza = Literal[
     "activa", "acuerdo_pago", "judicial", "pagada", "archivada", "castigo"
 ]
 TipoCobranza = Literal["extrajudicial", "judicial"]
+TipoDocumento = Literal["pagare", "factura", "letra", "cheque", "otro"]
 
 
 class CobranzaBase(BaseModel):
@@ -57,8 +58,9 @@ class CobranzaBase(BaseModel):
     fecha_ingreso_hadad: Optional[date] = None
     fecha_traspaso: Optional[date] = None
 
-    # Pagaré
-    numero_pagare: Optional[str] = Field(None, max_length=50)
+    # Documento que identifica la deuda (pagaré, factura, letra...)
+    tipo_documento: TipoDocumento = "pagare"
+    numero_pagare: Optional[str] = Field(None, max_length=50)  # N° del documento
     fecha_ejecucion_pagare: Optional[date] = None
     fecha_vencimiento_pagare: Optional[date] = None
     comprobante_envio: Optional[str] = Field(None, max_length=200)
@@ -110,6 +112,7 @@ class CobranzaUpdate(BaseModel):
     fecha_ingreso_hadad: Optional[date] = None
     fecha_traspaso: Optional[date] = None
 
+    tipo_documento: Optional[TipoDocumento] = None
     numero_pagare: Optional[str] = None
     fecha_ejecucion_pagare: Optional[date] = None
     fecha_vencimiento_pagare: Optional[date] = None

@@ -73,6 +73,18 @@ body {
 
 .menu { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 
+/* Títulos de sección del menú (como la portada del sistema original). */
+.menu-grupo {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #7d8b99;
+  margin: 14px 12px 2px;
+}
+
+.menu-grupo:first-child { margin-top: 0; }
+
 .menu a {
   color: #c3d2e0;
   text-decoration: none;
@@ -513,6 +525,16 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
+}
+
+.alerta-exito {
+  background: #d3f5e2;
+  color: var(--verde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
 @media (max-width: 900px) {

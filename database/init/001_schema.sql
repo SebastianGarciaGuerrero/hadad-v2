@@ -250,8 +250,12 @@ CREATE TABLE cobranzas (
     fecha_ingreso_hadad      DATE          NOT NULL DEFAULT CURRENT_DATE,  -- cuando entró a Hadad
     fecha_traspaso           DATE,         -- cuando la clínica derivó a cobranza judicial
 
-    -- Pagaré
-    numero_pagare            VARCHAR(50),
+    -- Documento que identifica la deuda (para clínicas es el pagaré;
+    -- también hay facturas, letras, cheques...)
+    tipo_documento           VARCHAR(30)   DEFAULT 'pagare'
+                                 CHECK (tipo_documento IN
+                                     ('pagare','factura','letra','cheque','otro')),
+    numero_pagare            VARCHAR(50),  -- N° del documento
     fecha_ejecucion_pagare   DATE,
     fecha_vencimiento_pagare DATE,
     comprobante_envio        VARCHAR(200), -- N° Chilexpress o Correos Chile

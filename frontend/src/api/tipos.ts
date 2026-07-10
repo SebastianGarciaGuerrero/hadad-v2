@@ -49,6 +49,8 @@ export interface DeudorDetalle extends Deudor {
 export type EstadoCobranza =
   | 'activa' | 'acuerdo_pago' | 'judicial' | 'pagada' | 'archivada' | 'castigo'
 
+export type TipoDocumento = 'pagare' | 'factura' | 'letra' | 'cheque' | 'otro'
+
 export interface Cobranza {
   id: string
   numero: number
@@ -58,6 +60,8 @@ export interface Cobranza {
   id_clinica: string | null
   monto_original: string
   monto_actual: string
+  tipo_documento: TipoDocumento
+  numero_pagare: string | null
   estado: EstadoCobranza
   tipo: 'extrajudicial' | 'judicial'
   fecha_ingreso_hadad: string | null

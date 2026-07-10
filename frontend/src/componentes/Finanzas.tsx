@@ -274,7 +274,7 @@ function FormNuevoAcuerdo({ cobranza, alCrear }: { cobranza: Cobranza; alCrear: 
 // Formulario para registrar un pago (de una cuota o directo)
 // ------------------------------------------------------------
 
-function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
+export function FormPago({ cobranzaId, cuota, alTerminar, alCancelar }: {
   cobranzaId: string
   cuota: Cuota | null
   alTerminar: () => void

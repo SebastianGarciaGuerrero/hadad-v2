@@ -65,8 +65,9 @@ class Cobranza(Base):
     fecha_ingreso_hadad = Column(Date, nullable=False, server_default=text("CURRENT_DATE"))
     fecha_traspaso = Column(Date)
 
-    # --- Pagaré ---
-    numero_pagare = Column(String(50))
+    # --- Documento que identifica la deuda (pagaré, factura, letra...) ---
+    tipo_documento = Column(String(30), server_default=text("'pagare'"))
+    numero_pagare = Column(String(50))  # N° del documento
     fecha_ejecucion_pagare = Column(Date)
     fecha_vencimiento_pagare = Column(Date)
     comprobante_envio = Column(String(200))

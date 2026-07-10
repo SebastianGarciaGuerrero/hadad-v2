@@ -6,17 +6,29 @@ import { api, mensajeDeError } from '../api/client'
 import type { Cliente, Filial, Deudor, Cobranza } from '../api/tipos'
 
 // Alta de cobranza: cliente + filial + deudor (buscándolo por RUT/nombre)
-// + monto. El N° Hadad lo asigna PostgreSQL; el saldo parte igual a la deuda.
+// + monto + documento que identifica la deuda (pagaré, factura...).
+// El N° Hadad lo asigna PostgreSQL; el saldo parte igual a la deuda.
+// Con enPagina=true el formulario vive en su propia página (siempre abierto).
 
-export default function NuevaCobranza() {
+const TIPOS_DOCUMENTO = [
+  ['pagare', 'Pagaré'],
+  ['factura', 'Factura'],
+  ['letra', 'Letra'],
+  ['cheque', 'Cheque'],
+  ['otro', 'Otro'],
+] as const
+
+export default function NuevaCobranza({ enPagina = false }: { enPagina?: boolean }) {
   const qc = useQueryClient()
   const navegar = useNavigate()
-  const [abierto, setAbierto] = useState(false)
+  const [abierto, setAbierto] = useState(enPagina)
 
   const [clienteId, setClienteId] = useState('')
   const [filialId, setFilialId] = useState('')
   const [idClinica, setIdClinica] = useState('')
   const [monto, setMonto] = useState('')
+  const [tipoDocumento, setTipoDocumento] = useState('pagare')
+  const [numeroDocumento, setNumeroDocumento] = useState('')
   const [prevision, setPrevision] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [error, setError] = useState('')
@@ -54,6 +66,8 @@ export default function NuevaCobranza() {
         deudor_id: deudor!.id,
         id_clinica: idClinica || null,
         monto_original: monto,
+        tipo_documento: tipoDocumento,
+        numero_pagare: numeroDocumento || null,
         prevision: prevision || null,
         observaciones: observaciones || null,
       })
@@ -164,6 +178,22 @@ export default function NuevaCobranza() {
         </label>
       </div>
 
+      <div className="fila">
+        <label>
+          Tipo de documento
+          <select value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+            {TIPOS_DOCUMENTO.map(([valor, nombre]) => (
+              <option key={valor} value={valor}>{nombre}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          N° de documento
+          <input value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)}
+            placeholder="N° de pagaré, factura…" />
+        </label>
+      </div>
+
       <label>
         Observaciones
         <textarea rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
@@ -177,7 +207,11 @@ export default function NuevaCobranza() {
         <button className="btn btn-primario" disabled={crear.isPending}>
           {crear.isPending ? 'Creando…' : 'Crear cobranza'}
         </button>
-        <button type="button" className="btn btn-secundario" onClick={() => setAbierto(false)}>
+        <button
+          type="button"
+          className="btn btn-secundario"
+          onClick={() => (enPagina ? navegar('/cobranzas') : setAbierto(false))}
+        >
           Cancelar
         </button>
       </div>

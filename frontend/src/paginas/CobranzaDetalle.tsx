@@ -92,6 +92,11 @@ export default function CobranzaDetalle() {
             </dd>
             <dt>ID cliente</dt>
             <dd className="mono">{cob.id_clinica ?? '—'}</dd>
+            <dt>Documento</dt>
+            <dd>
+              {cob.tipo_documento === 'pagare' ? 'Pagaré' : cob.tipo_documento}
+              {cob.numero_pagare && <span className="mono suave"> N° {cob.numero_pagare}</span>}
+            </dd>
             <dt>Deuda original</dt>
             <dd><Plata valor={cob.monto_original} /></dd>
             <dt>Saldo actual</dt>

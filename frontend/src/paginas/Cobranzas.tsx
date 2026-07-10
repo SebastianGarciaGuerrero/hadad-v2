@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Cobranza, Cliente, EstadoCobranza } from '../api/tipos'
 import { EtiquetaEstado, Plata } from '../componentes/utiles'
-import NuevaCobranza from '../componentes/NuevaCobranza'
 
 const ESTADOS: EstadoCobranza[] = [
   'activa', 'acuerdo_pago', 'judicial', 'pagada', 'archivada', 'castigo',
@@ -42,10 +41,6 @@ export default function Cobranzas() {
       <header className="pagina-cabecera">
         <h1>Cobranzas</h1>
       </header>
-
-      <div className="alta-zona">
-        <NuevaCobranza />
-      </div>
 
       <div className="filtros">
         <input

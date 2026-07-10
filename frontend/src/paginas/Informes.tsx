@@ -1,15 +1,7 @@
 import { useState } from 'react'
-import type { ChangeEvent } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { api, descargarArchivo as descargar, mensajeDeError } from '../api/client'
+import { useQuery } from '@tanstack/react-query'
+import { api, descargarArchivo as descargar } from '../api/client'
 import type { Cliente } from '../api/tipos'
-
-interface ResultadoImportacion {
-  filas_procesadas: number
-  cobranzas_creadas: number
-  deudores_nuevos: number
-  errores: { fila: number; error: string }[]
-}
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -116,86 +108,7 @@ export default function Informes() {
           </button>
         </section>
 
-        <CargaMasiva />
       </div>
     </>
-  )
-}
-
-// ------------------------------------------------------------
-// Carga masiva: plantilla + subida del Excel lleno
-// ------------------------------------------------------------
-
-function CargaMasiva() {
-  const [resultado, setResultado] = useState<ResultadoImportacion | null>(null)
-  const [error, setError] = useState('')
-
-  const subir = useMutation({
-    mutationFn: async (archivo: File) => {
-      const form = new FormData()
-      form.append('archivo', archivo)
-      const { data } = await api.post<ResultadoImportacion>('/importar/cobranzas', form)
-      return data
-    },
-    onSuccess: (data) => { setResultado(data); setError('') },
-    onError: (err) => { setResultado(null); setError(mensajeDeError(err)) },
-  })
-
-  function alElegirArchivo(e: ChangeEvent<HTMLInputElement>) {
-    const archivo = e.target.files?.[0]
-    if (archivo) subir.mutate(archivo)
-    e.target.value = ''  // permite volver a subir el mismo archivo
-  }
-
-  return (
-    <section className="tarjeta">
-      <h2>📥 Carga masiva</h2>
-      <p className="suave">
-        Ingresa muchas cobranzas de una vez: descarga la plantilla, llénala
-        (una fila por cobranza) y súbela. Los deudores nuevos se crean solos
-        por RUT; el cliente debe existir en el sistema.
-      </p>
-      <div className="fila">
-        <button
-          className="btn btn-secundario"
-          onClick={() => descargar('/importar/plantilla')}
-        >
-          ⬇ Descargar plantilla
-        </button>
-        <label className="btn btn-primario subir-archivo">
-          {subir.isPending ? 'Procesando…' : '⬆ Subir Excel lleno'}
-          <input
-            type="file"
-            accept=".xlsx"
-            onChange={alElegirArchivo}
-            disabled={subir.isPending}
-            hidden
-          />
-        </label>
-      </div>
-
-      {error && <div className="alerta-error">{error}</div>}
-      {resultado && (
-        <div className="resultado-carga">
-          <p>
-            ✅ <strong>{resultado.cobranzas_creadas}</strong> cobranzas creadas
-            de {resultado.filas_procesadas} filas
-            ({resultado.deudores_nuevos} deudores nuevos).
-          </p>
-          {resultado.errores.length > 0 && (
-            <>
-              <p className="suave">Filas con problemas ({resultado.errores.length}):</p>
-              <ul className="lista-errores">
-                {resultado.errores.map((e) => (
-                  <li key={e.fila}>
-                    <span className="mono">Fila {e.fila}:</span> {e.error}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-    </section>
   )
 }
