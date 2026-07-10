@@ -45,7 +45,7 @@ export default function Cobranzas() {
       <div className="filtros">
         <input
           className="buscador"
-          placeholder="Buscar por N° Hadad, ID cliente, RUT o nombre del deudor…"
+          placeholder="Buscar por N° de cobranza, ID cliente, RUT o nombre del deudor…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -71,7 +71,7 @@ export default function Cobranzas() {
         <table className="tabla">
           <thead>
             <tr>
-              <th>N° Hadad</th>
+              <th>N° Cobranza</th>
               <th>ID cliente</th>
               <th>Estado</th>
               <th className="der">Deuda original</th>

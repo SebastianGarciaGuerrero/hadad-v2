@@ -45,7 +45,7 @@ router = APIRouter(
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENCABEZADOS = [
-    "Fecha gestión", "N° Hadad", "ID clínica", "RUT deudor", "Deudor",
+    "Fecha gestión", "N° Cobranza", "ID clínica", "RUT deudor", "Deudor",
     "Cliente", "Filial", "Tipo de gestión", "Descripción",
     "Próximo contacto", "Registrada por",
 ]
@@ -204,7 +204,7 @@ def exportar_recupero(
     filas = db.execute(text(sql), params).mappings().all()
 
     encabezados = [
-        "Fecha pago", "N° Hadad", "ID cliente", "Cliente", "Filial",
+        "Fecha pago", "N° Cobranza", "ID cliente", "Cliente", "Filial",
         "Deudor", "RUT deudor", "Total recibido", "Capital clínica",
         "Honorarios Hadad", "Interés clínica", "Gastos judiciales",
         "Estado", "Forma de pago", "N° comprobante", "Cuota", "Registrado por",

@@ -275,7 +275,7 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     const q = (params.q ?? '').toLowerCase()
     const lista = db.cobranzas.filter((c) => {
       const d = db.deudores.find((x) => x.id === c.deudor_id)
-      return String(c.numero) === q || (c.id_clinica ?? '').toLowerCase().includes(q)
+      return String(c.numero).includes(q) || (c.id_clinica ?? '').toLowerCase().includes(q)
         || d?.rut.includes(q) || d?.nombre.toLowerCase().includes(q)
     })
     return ok(config, lista)

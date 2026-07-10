@@ -15,7 +15,7 @@ cambia su 'estado' a 'archivada' o 'castigo' vía PUT.
 from uuid import UUID
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -71,26 +71,24 @@ def listar_cobranzas(
 
 @router.get("/buscar", response_model=List[CobranzaResponse])
 def buscar_cobranzas(
-    q: str = Query(..., min_length=1, description="N° Hadad, ID clínica, RUT o nombre del deudor"),
+    q: str = Query(..., min_length=1, description="N° de cobranza, ID cliente, RUT o nombre del deudor"),
     limit: int = 50,
     db: Session = Depends(get_db)
 ):
     """
-    Busca cobranzas por N° Hadad, ID clínica, o RUT/nombre del deudor.
-    Si 'q' es un número, también lo prueba como N° Hadad exacto.
+    Busca cobranzas por N° de cobranza (coincidencia parcial: '2000'
+    encuentra la 20001), ID cliente, o RUT/nombre del deudor.
     """
     patron = f"%{q}%"
     # join con Deudor para poder buscar por RUT o nombre del deudor
     query = db.query(Cobranza).join(Deudor, Cobranza.deudor_id == Deudor.id)
 
     condiciones = [
+        cast(Cobranza.numero, String).like(patron),
         Cobranza.id_clinica.ilike(patron),
         Deudor.rut.ilike(patron),
         Deudor.nombre.ilike(patron),
     ]
-    # Si 'q' es numérico, agregar coincidencia exacta por N° Hadad.
-    if q.isdigit():
-        condiciones.append(Cobranza.numero == int(q))
 
     return query.filter(or_(*condiciones)).limit(limit).all()
 

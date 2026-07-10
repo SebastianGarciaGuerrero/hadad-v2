@@ -69,7 +69,7 @@ export default function Abonos() {
         <table className="tabla">
           <thead>
             <tr>
-              <th>N° Hadad</th><th>ID cliente</th><th>Estado</th>
+              <th>N° Cobranza</th><th>ID cliente</th><th>Estado</th>
               <th className="der">Saldo</th><th></th>
             </tr>
           </thead>
