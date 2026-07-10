@@ -116,13 +116,13 @@ export default function CobranzaDetalle() {
               className="btn btn-secundario"
               onClick={() => descargarArchivo(`/documentos/informe-gestiones/${cob.id}`)}
             >
-              📄 Informe de gestiones (Word)
+              Informe de gestiones (Word)
             </button>
             <button
               className="btn btn-secundario"
               onClick={() => descargarArchivo(`/documentos/estado-cuenta/${cob.id}`)}
             >
-              📄 Estado de cuenta (Word)
+              Estado de cuenta (Word)
             </button>
           </div>
         </section>
@@ -170,7 +170,7 @@ export default function CobranzaDetalle() {
                 <p>{g.descripcion}</p>
                 {g.fecha_proximo_contacto && (
                   <div className="proximo-aviso">
-                    📅 Próximo contacto: {fechaLegible(g.fecha_proximo_contacto)}
+                    Próximo contacto: {fechaLegible(g.fecha_proximo_contacto)}
                   </div>
                 )}
               </li>

@@ -4,8 +4,9 @@ import { api } from '../api/client'
 import type { Deudor, DeudorDetalle } from '../api/tipos'
 import NuevoDeudor from '../componentes/NuevoDeudor'
 
-const ICONO_CONTACTO: Record<string, string> = {
-  telefono: '☎️', celular: '📱', email: '✉️', whatsapp: '💬', otro: '📎',
+const NOMBRE_CONTACTO: Record<string, string> = {
+  telefono: 'Teléfono', celular: 'Celular', email: 'Email',
+  whatsapp: 'WhatsApp', otro: 'Otro',
 }
 
 export default function Deudores() {
@@ -105,9 +106,8 @@ export default function Deudores() {
             <ul className="lista-contactos">
               {detalle.contactos.filter((c) => c.activo).map((c) => (
                 <li key={c.id}>
-                  <span>{ICONO_CONTACTO[c.tipo]}</span>
+                  <span className="suave">{NOMBRE_CONTACTO[c.tipo] ?? c.tipo}</span>
                   <span className="mono">{c.valor}</span>
-                  <span className="suave">{c.tipo}</span>
                 </li>
               ))}
               {detalle.contactos.filter((c) => c.activo).length === 0 && (

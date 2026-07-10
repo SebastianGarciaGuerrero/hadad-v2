@@ -69,7 +69,7 @@ export default function CargaMasiva() {
             className="btn btn-secundario"
             onClick={() => descargarArchivo('/importar/plantilla')}
           >
-            ⬇ Descargar Excel de formato
+            Descargar Excel de formato
           </button>
 
           <h2 className="separado">Paso 2 · Subir el archivo lleno</h2>
@@ -78,7 +78,7 @@ export default function CargaMasiva() {
             verás el detalle de las que fallaron para corregirlas y resubirlas.
           </p>
           <label className="btn btn-primario subir-archivo">
-            {subir.isPending ? 'Procesando…' : '⬆ Subir formato lleno'}
+            {subir.isPending ? 'Procesando…' : 'Subir formato lleno'}
             <input type="file" accept=".xlsx" onChange={alElegirArchivo}
               disabled={subir.isPending} hidden />
           </label>
@@ -87,7 +87,7 @@ export default function CargaMasiva() {
           {resultado && (
             <div className="resultado-carga">
               <p>
-                ✅ <strong>{resultado.cobranzas_creadas}</strong> cobranzas creadas
+                <strong>{resultado.cobranzas_creadas}</strong> cobranzas creadas
                 de {resultado.filas_procesadas} filas
                 ({resultado.deudores_nuevos} deudores nuevos).
               </p>

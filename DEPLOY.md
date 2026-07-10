@@ -4,6 +4,30 @@ Arquitectura: **una sola URL** — el backend FastAPI sirve también el frontend
 compilado (por eso no usamos Vercel: acá hay Python + PostgreSQL, no solo
 archivos estáticos).
 
+## ⭐ Opción rápida: DEMO solo-frontend en Vercel (sin backend)
+
+Para **mostrar** el sistema (interfaz + flujo completo con datos simulados
+que viven en el navegador de quien mira). No necesita base de datos ni
+servidor: gratis para siempre en Vercel y el código queda privado.
+
+1. En https://vercel.com → **Add New → Project** → importar el repo `hadad-v2`.
+2. En la configuración del proyecto:
+   - **Root Directory**: `frontend`
+   - Framework: Vite (lo detecta solo; el `frontend/vercel.json` ya trae el
+     build command `npm run build:demo` y las rewrites del SPA)
+3. Deploy → sale una URL tipo `https://hadad-v2.vercel.app`.
+4. Se entra con `grv@hadad.cl` / `giselle` (la pantalla de login lo indica).
+
+Qué funciona en la demo: login, cobranzas, deudores, ficha completa,
+registrar gestiones, acuerdos con cuotas, abonos con desglose y cascada,
+reportes de equipo. Los datos se guardan en el navegador de cada visitante.
+Qué NO funciona: descargas Excel/Word y carga masiva (muestran un aviso;
+requieren el servidor).
+
+---
+
+## Versión completa (con servidor y base de datos real)
+
 La base de datos va SIEMPRE en **Neon** (Paso 1 y 2). Para la aplicación hay
 tres opciones — elige la primera que tengas disponible:
 

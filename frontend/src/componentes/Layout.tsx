@@ -23,18 +23,18 @@ export default function Layout() {
 
         <nav className="menu">
           <div className="menu-grupo">Gestión</div>
-          <NavLink to="/cobranzas" end>📁 Cobranzas</NavLink>
-          <NavLink to="/deudores">👤 Deudores</NavLink>
+          <NavLink to="/cobranzas" end>Cobranzas</NavLink>
+          <NavLink to="/deudores">Deudores</NavLink>
 
           <div className="menu-grupo">Ingresos</div>
-          <NavLink to="/cobranzas/nueva">➕ Ingreso de cobranza</NavLink>
-          <NavLink to="/abonos">💰 Ingreso de abonos</NavLink>
-          <NavLink to="/carga-masiva">📥 Carga masiva</NavLink>
+          <NavLink to="/cobranzas/nueva">Ingreso de cobranza</NavLink>
+          <NavLink to="/abonos">Ingreso de abonos</NavLink>
+          <NavLink to="/carga-masiva">Carga masiva</NavLink>
 
           <div className="menu-grupo">Reportes</div>
-          <NavLink to="/informes">📊 Informes</NavLink>
+          <NavLink to="/informes">Informes</NavLink>
           {usuario.rol_id === 1 && (
-            <NavLink to="/equipo">👥 Equipo</NavLink>
+            <NavLink to="/equipo">Equipo</NavLink>
           )}
         </nav>
 

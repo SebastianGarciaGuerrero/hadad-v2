@@ -43,7 +43,7 @@ export default function Informes() {
 
       <div className="informes-grilla">
         <section className="tarjeta">
-          <h2>📋 Gestiones recientes</h2>
+          <h2>Gestiones recientes</h2>
           <p className="suave">
             Todas las gestiones realizadas en los últimos días, con deudor,
             tipo y quién la registró.
@@ -63,12 +63,12 @@ export default function Informes() {
             className="btn btn-primario"
             onClick={() => descargar('/exportar/gestiones', { dias, ...filtroCliente })}
           >
-            ⬇ Descargar Excel
+            Descargar Excel
           </button>
         </section>
 
         <section className="tarjeta">
-          <h2>💰 Recupero mensual</h2>
+          <h2>Recupero mensual</h2>
           <p className="suave">
             Detalle de cada pago del mes con su desglose capital /
             honorarios / interés.
@@ -90,12 +90,12 @@ export default function Informes() {
             className="btn btn-primario"
             onClick={() => descargar('/exportar/recupero', { mes, anio, ...filtroCliente })}
           >
-            ⬇ Descargar Excel
+            Descargar Excel
           </button>
         </section>
 
         <section className="tarjeta">
-          <h2>🏥 Cuadro de rendición</h2>
+          <h2>Cuadro de rendición</h2>
           <p className="suave">
             Resumen por cliente y filial: cuánto se rinde a la clínica en el
             mes. Usa el mismo mes y año del recupero.
@@ -104,7 +104,7 @@ export default function Informes() {
             className="btn btn-primario"
             onClick={() => descargar('/exportar/rendicion', { mes, anio, ...filtroCliente })}
           >
-            ⬇ Descargar Excel
+            Descargar Excel
           </button>
         </section>
 
