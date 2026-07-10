@@ -527,6 +527,15 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   font-size: 14px;
 }
 
+.aviso-demo {
+  background: #eef4fb;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
 .alerta-exito {
   background: #d3f5e2;
   color: var(--verde);

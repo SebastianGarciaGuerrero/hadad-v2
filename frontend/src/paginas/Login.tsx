@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { mensajeDeError } from '../api/client'
+import { mensajeDeError, ES_DEMO } from '../api/client'
 
 export default function Login() {
   const { login } = useAuth()
@@ -58,6 +58,15 @@ export default function Login() {
         </label>
 
         {error && <div className="alerta-error">{error}</div>}
+
+        {ES_DEMO && (
+          <div className="aviso-demo">
+            <strong>Versión demo</strong> — los datos son de práctica y se
+            guardan solo en este navegador.<br />
+            Entra con <span className="mono">grv@hadad.cl</span> /{' '}
+            <span className="mono">giselle</span>
+          </div>
+        )}
 
         <button className="btn btn-primario" disabled={enviando}>
           {enviando ? 'Ingresando…' : 'Ingresar'}

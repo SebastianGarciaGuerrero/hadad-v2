@@ -6,7 +6,18 @@ import axios from 'axios'
 
 export const TOKEN_KEY = 'hadad_token'
 
+// MODO DEMO (npm run build:demo): sin servidor, los datos viven en el
+// navegador. Sirve para publicar solo el frontend (ej. Vercel).
+export const ES_DEMO = import.meta.env.MODE === 'demo'
+
 export const api = axios.create({ baseURL: '/api' })
+
+if (ES_DEMO) {
+  // Reemplaza el transporte HTTP por el backend simulado del navegador.
+  import('./demo').then(({ adaptadorDemo }) => {
+    api.defaults.adapter = adaptadorDemo
+  })
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)
@@ -27,6 +38,10 @@ api.interceptors.response.use(
 
 /** Descarga un archivo del backend (Excel/Word) respetando el token. */
 export async function descargarArchivo(ruta: string, params?: Record<string, string>) {
+  if (ES_DEMO) {
+    alert('Las descargas (Excel y Word) funcionan en la versión completa, que corre con servidor y base de datos. Esta demo muestra la interfaz y el flujo de trabajo.')
+    return
+  }
   const res = await api.get(ruta, { params, responseType: 'blob' })
   const disposicion: string = res.headers['content-disposition'] ?? ''
   const nombre = /filename="?([^";]+)"?/.exec(disposicion)?.[1] ?? 'archivo'
