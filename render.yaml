@@ -1,0 +1,17 @@
+# Blueprint de Render: al conectar el repo, Render lee este archivo y crea
+# el servicio automáticamente. Ver DEPLOY.md para el paso a paso.
+services:
+  - type: web
+    name: hadad-v2
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # se pega a mano (la URL de Neon)
+      - key: SECRET_KEY
+        generateValue: true  # Render genera una clave segura sola
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "demo"

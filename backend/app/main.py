@@ -3,7 +3,12 @@ Hadad 2.0 - Backend API
 Punto de entrada principal de la aplicación FastAPI.
 """
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
@@ -59,14 +64,6 @@ app.include_router(reportes.router)
 app.include_router(auditoria_router.router)
 
 
-@app.get("/")
-def root():
-    return {
-        "mensaje": "Hadad 2.0 API funcionando correctamente",
-        "documentacion": "/docs"
-    }
-
-
 @app.get("/api/health")
 def health_check():
     return {
@@ -90,3 +87,35 @@ def health_check_db(db: Session = Depends(get_db)):
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+# ============================================================
+# Frontend compilado (producción)
+# En desarrollo el frontend corre aparte con Vite (npm run dev).
+# En producción se sirve la carpeta frontend/dist desde esta misma
+# app: una sola URL para todo, sin CORS. El catch-all va AL FINAL
+# para no pisar las rutas /api ni /docs.
+# ============================================================
+
+RUTA_DIST = Path(os.environ.get(
+    "FRONTEND_DIST",
+    str(Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"),
+))
+
+if RUTA_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=RUTA_DIST / "assets"), name="assets")
+
+    @app.get("/{ruta:path}", include_in_schema=False)
+    def servir_frontend(ruta: str):
+        """Archivos del frontend; cualquier otra ruta cae en index.html (SPA)."""
+        archivo = RUTA_DIST / ruta
+        if ruta and archivo.is_file():
+            return FileResponse(archivo)
+        return FileResponse(RUTA_DIST / "index.html")
+else:
+    @app.get("/", include_in_schema=False)
+    def root():
+        return {
+            "mensaje": "Hadad 2.0 API funcionando correctamente",
+            "documentacion": "/docs",
+        }
