@@ -214,114 +214,169 @@ def informe_gestiones(cobranza_id: UUID, db: Session = Depends(get_db)):
     return _responder_docx(doc, nombre)
 
 
+# ------------------------------------------------------------
+# Estado de cuenta: carta formal calcada de la "BASE CARTAS
+# REDSALUD" real del estudio (Courier New, estilo legal).
+# ------------------------------------------------------------
+
+ABREV_DOCUMENTO = {
+    "pagare": "PA", "factura": "FA", "letra": "LE", "cheque": "CH", "otro": "OT",
+}
+
+PIE_CARTA = (
+    "Errázuriz N° 1178, oficina 74, Valparaíso (Atención de 10 a 16 hrs.). "
+    "Fono: (32)2450990 – (9)79593717\n"
+    " gisellerojas.hadadyasociados@gmail.com; recepcion@hadadyasociados.cl "
+    "www.hadadyasociados.cl"
+)
+
+
+def _rut_con_puntos(rut) -> str:
+    """'5743070-2' → '5.743.070-2' (formato de la carta)."""
+    if not rut:
+        return "—"
+    cuerpo, _, dv = str(rut).partition("-")
+    cuerpo = cuerpo.replace(".", "")
+    con_puntos = f"{int(cuerpo):,}".replace(",", ".") if cuerpo.isdigit() else cuerpo
+    return f"{con_puntos}-{dv}" if dv else con_puntos
+
+
+def _miles(valor) -> str:
+    """Monto con separador de miles y sin símbolo (como la carta)."""
+    return f"{int(valor):,}".replace(",", ".")
+
+
+def _linea(doc: Document, texto: str, tam: float = 8.5, negrita: bool = False,
+           alineacion=None, justificar: bool = False):
+    """Párrafo en Courier New (la carta usa fuente monoespaciada)."""
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
+    if alineacion is not None:
+        p.alignment = alineacion
+    if justificar:
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    r = p.add_run(texto)
+    r.font.name = "Courier New"
+    r.font.size = Pt(tam)
+    r.bold = negrita
+    return p
+
+
 @router.get("/estado-cuenta/{cobranza_id}")
 def estado_cuenta(cobranza_id: UUID, db: Session = Depends(get_db)):
-    """Word formal con el estado de cuenta actualizado del caso."""
+    """
+    Carta de estado de cuenta con los datos actualizados del caso,
+    con el mismo formato de la carta que el estudio envía (BASE REDSALUD).
+    """
+    from docx.shared import Cm as _Cm
+    from app.models.paciente import Paciente
+
     cob = _cargar_cobranza(db, cobranza_id)
-    pagos = (
-        db.query(Pago)
-        .filter(Pago.cobranza_id == cobranza_id)
-        .order_by(Pago.fecha_pago)
-        .all()
-    )
-    acuerdo = (
-        db.query(AcuerdoPago)
-        .filter(AcuerdoPago.cobranza_id == cobranza_id, AcuerdoPago.estado == "vigente")
-        .first()
-    )
+    pagos = db.query(Pago).filter(Pago.cobranza_id == cobranza_id).all()
+
+    deudor = cob.deudor
+    cliente = cob.cliente
+    paciente = None
+    if cob.paciente_id:
+        paciente = db.query(Paciente).filter(Paciente.id == cob.paciente_id).first()
+
+    # Celular del deudor (primer contacto activo tipo celular/teléfono).
+    celular = ""
+    if deudor is not None:
+        for c in deudor.contactos:
+            if c.activo and c.tipo in ("celular", "telefono", "whatsapp"):
+                celular = c.valor
+                break
+
+    # Cifras del cuadro resumen. El SALDO suma lo que resta de capital más
+    # honorarios/intereses/gastos informados de la cobranza.
+    nominal = int(cob.monto_original)
+    gastos = int(cob.gastos_hadad or 0)
+    abonos = int(sum((p.capital_clinica or 0) for p in pagos))
+    honorarios = int(cob.honorarios_hadad or 0)
+    intereses = int(cob.intereses_hadad or 0)
+    saldo = int(cob.monto_actual) + honorarios + intereses + gastos
 
     doc = Document()
-    _membrete(doc)
-    _titulo_documento(doc, "ESTADO DE CUENTA")
+    seccion = doc.sections[0]
+    seccion.top_margin = _Cm(2.5)
+    seccion.left_margin = _Cm(3.0)
+    seccion.right_margin = _Cm(2.0)
 
-    intro = doc.add_paragraph()
-    r = intro.add_run(
-        f"En Valparaíso, a {_fecha_larga(date.today())}, se certifica el "
-        f"siguiente estado de cuenta del caso que se individualiza:"
+    hoy = date.today()
+    _linea(doc, f"{'':>49}Valparaíso, {hoy.day} de {MESES[hoy.month - 1]}, {hoy.year}")
+    _linea(doc, "")
+    _linea(doc, "")
+    _linea(doc, "          Señor(es)")
+    id_texto = f" ID {cob.id_clinica}" if cob.id_clinica else ""
+    nombre_deudor = (deudor.nombre.upper() if deudor else "—") + id_texto
+    _linea(doc, f"         {nombre_deudor:<52}N° COB.: {cob.numero}")
+    _linea(doc, f"         R.U.T.: {_rut_con_puntos(deudor.rut if deudor else '')}")
+    if paciente is not None:
+        _linea(doc, f"         PACIENTE {paciente.nombre.upper()}")
+    if celular:
+        _linea(doc, f"{'':>59}N° CEL.: {celular}")
+    if deudor is not None and deudor.direccion:
+        _linea(doc, f"         {deudor.direccion.upper()}")
+    ciudad = (deudor.ciudad or deudor.comuna) if deudor else None
+    if ciudad:
+        _linea(doc, f"         {ciudad.upper()}")
+    _linea(doc, "")
+    _linea(doc, "         Estimado Señor(es):")
+    _linea(doc, "")
+
+    estudio = (cliente.nombre_fantasia or cliente.razon_social).upper() if cliente else "—"
+    razon = cliente.razon_social.upper() if cliente else "—"
+    rut_cliente = _rut_con_puntos(cliente.rut) if cliente else "—"
+    cuerpo = (
+        f"         Nuestro departamento legal ha recibido para su cobranza "
+        f"{cob.tipo} los documentos que se detallan a continuación, enviados "
+        f"por nuestro cliente {razon}, Rut. :{rut_cliente}, Estudio: {estudio}."
     )
-    r.font.size = Pt(10.5)
+    _linea(doc, cuerpo, justificar=True)
+    _linea(doc, "")
 
-    total_abonado = sum((p.monto or 0) for p in pagos)
-    capital_abonado = sum((p.capital_clinica or 0) for p in pagos)
+    # Detalle del documento (columnas monoespaciadas como la carta).
+    _linea(doc, f"         {'FECHA VCTO':<19}{'TIP.DOC':<17}{'NRO.DOC':<17}{'MONTO':<15}C.P.")
+    fecha_vcto = (cob.fecha_vencimiento_pagare.strftime("%d-%m-%Y")
+                  if cob.fecha_vencimiento_pagare else "—")
+    tip = ABREV_DOCUMENTO.get(cob.tipo_documento or "pagare", "OT")
+    nro = cob.numero_pagare or (cob.id_clinica or "—")
+    _linea(doc, f"         {fecha_vcto:<19}{tip:<17}{nro:<17}{_miles(nominal):<15}0")
+    _linea(doc, "")
 
-    _tabla_datos(doc, [
-        ("N° de cobranza", cob.numero),
-        ("ID cliente", cob.id_clinica or "—"),
-        ("Deudor", f"{cob.deudor.nombre} — RUT {cob.deudor.rut}" if cob.deudor else "—"),
-        ("Cliente", (cob.cliente.nombre_fantasia or cob.cliente.razon_social) if cob.cliente else "—"),
-        ("Deuda original (capital)", _clp(cob.monto_original)),
-        ("Capital abonado", _clp(capital_abonado)),
-        ("Total abonado (incluye honorarios)", _clp(total_abonado)),
-        ("SALDO DE CAPITAL ADEUDADO", _clp(cob.monto_actual)),
-        ("Estado del caso", cob.estado.replace("_", " ").capitalize()),
-    ])
+    # Cuadro resumen.
+    _linea(doc, f"          {'NOMINAL':<13}{'GASTOS':<12}{'ABONOS':<12}{'HONORARIOS':<15}{'INTERESES':<14}SALDO")
+    _linea(doc, f"          {_miles(nominal):<13}{_miles(gastos):<12}{_miles(abonos):<12}"
+                f"{_miles(honorarios):<15}{_miles(intereses):<14}{_miles(saldo)}")
+    _linea(doc, "")
+    _linea(doc, "")
 
-    if acuerdo is not None:
-        doc.add_paragraph()
-        sub = doc.add_paragraph()
-        r = sub.add_run("Acuerdo de pago vigente")
-        r.bold = True
-        r.font.size = Pt(11)
-        det = doc.add_paragraph()
-        r = det.add_run(
-            f"Acuerdo de fecha {_fecha_corta(acuerdo.fecha_acuerdo)} por "
-            f"{_clp(acuerdo.monto_total_acordado)} en {acuerdo.numero_cuotas} "
-            f"cuota(s), con vencimiento final el {_fecha_corta(acuerdo.fecha_termino)}."
-        )
-        r.font.size = Pt(10.5)
+    # Formas de pago (bloque Redsalud tal cual; genérico para otros clientes).
+    _linea(doc, f"    Formas de pago {estudio}:", tam=9, negrita=True)
+    if "SALUD" in estudio:
+        _linea(doc, "    - Directo en cajas en Clínica de su atención", tam=9)
+        _linea(doc, "    - Transferencia electrónica a la cuenta de la clínica.", tam=9)
+        _linea(doc, "    - Medios de pago electrónicos https://www.redsalud.cl/pagos-enlinea "
+                    "(10 cuotas sin interés con tarjeta de crédito Banco Estado y hasta 10 "
+                    "cuotas sin interés con tarjeta de crédito)", tam=9)
+    else:
+        _linea(doc, "    - Transferencia electrónica a la cuenta del cliente.", tam=9)
+        _linea(doc, "    - Coordinar directamente con nuestro estudio al fono (32)2450990.", tam=9)
+    _linea(doc, "    * una vez pagada su deuda debe enviarnos el comprobante por esta vía "
+                "para registrarlo y terminar su cobranza", tam=9)
+    _linea(doc, "")
+    _linea(doc, "")
+    _linea(doc, "    Sin otro particular le saluda atentamente,", tam=9)
+    _linea(doc, "")
+    _linea(doc, "ESTUDIO JURÍDICO HADAD & ASOCIADOS", tam=9, negrita=True,
+           alineacion=WD_ALIGN_PARAGRAPH.RIGHT)
 
-        tabla = doc.add_table(rows=1, cols=5)
-        tabla.style = "Table Grid"
-        for i, texto in enumerate(("Cuota", "Vencimiento", "Monto", "Pagado", "Estado")):
-            r = tabla.rows[0].cells[i].paragraphs[0].add_run(texto)
-            r.bold = True
-            r.font.size = Pt(10)
-        for c in acuerdo.cuotas:
-            fila = tabla.add_row().cells
-            valores = (
-                f"{c.numero_cuota}/{acuerdo.numero_cuotas}",
-                _fecha_corta(c.fecha_vencimiento),
-                _clp(c.monto),
-                _clp(c.monto_pagado),
-                c.estado.replace("_", " "),
-            )
-            for i, v in enumerate(valores):
-                fila[i].paragraphs[0].add_run(v).font.size = Pt(9.5)
-
-    if pagos:
-        doc.add_paragraph()
-        sub = doc.add_paragraph()
-        r = sub.add_run(f"Pagos registrados ({len(pagos)})")
-        r.bold = True
-        r.font.size = Pt(11)
-
-        tabla = doc.add_table(rows=1, cols=4)
-        tabla.style = "Table Grid"
-        for i, texto in enumerate(("Fecha", "Monto", "Capital", "Forma de pago")):
-            r = tabla.rows[0].cells[i].paragraphs[0].add_run(texto)
-            r.bold = True
-            r.font.size = Pt(10)
-        for p in pagos:
-            fila = tabla.add_row().cells
-            valores = (
-                _fecha_corta(p.fecha_pago),
-                _clp(p.monto),
-                _clp(p.capital_clinica or 0),
-                p.forma_pago or "—",
-            )
-            for i, v in enumerate(valores):
-                fila[i].paragraphs[0].add_run(v).font.size = Pt(9.5)
-
-    nota = doc.add_paragraph()
-    nota.paragraph_format.space_before = Pt(10)
-    r = nota.add_run(
-        "El presente documento refleja el estado de la cuenta a la fecha de "
-        "emisión y no constituye finiquito ni renuncia a acciones de cobro."
-    )
-    r.font.size = Pt(9)
-    r.font.color.rgb = GRIS_SUAVE
-
-    _pie_firma(doc)
+    # Pie de página con los datos de contacto del estudio (como la carta).
+    pie = seccion.footer.paragraphs[0]
+    r = pie.add_run(PIE_CARTA)
+    r.font.name = "Courier New"
+    r.font.size = Pt(8.5)
 
     nombre = f"estado_cuenta_cobranza_{cob.numero}_{date.today().isoformat()}.docx"
     return _responder_docx(doc, nombre)
