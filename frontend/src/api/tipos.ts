@@ -84,6 +84,7 @@ export interface Gestion {
   id: string
   cobranza_id: string
   usuario_id: string
+  usuario_nombre: string | null
   tipo_id: number | null
   descripcion: string
   fecha_gestion: string

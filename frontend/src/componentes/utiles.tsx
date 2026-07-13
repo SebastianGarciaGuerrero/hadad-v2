@@ -32,8 +32,10 @@ export function fechaLegible(iso: string | null): string {
 }
 
 export function fechaHoraLegible(iso: string): string {
-  return new Date(iso).toLocaleString('es-CL', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  // Formato compacto 24h: "23-07-2026 14:34". Se arma a mano para evitar
+  // las variaciones de locale (comas, a.m./p.m.).
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}`
 }

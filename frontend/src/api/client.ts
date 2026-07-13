@@ -12,12 +12,15 @@ export const ES_DEMO = import.meta.env.MODE === 'demo'
 
 export const api = axios.create({ baseURL: '/api' })
 
-if (ES_DEMO) {
-  // Reemplaza el transporte HTTP por el backend simulado del navegador.
-  import('./demo').then(({ adaptadorDemo }) => {
-    api.defaults.adapter = adaptadorDemo
-  })
-}
+// En modo demo, el transporte HTTP se reemplaza por el backend simulado del
+// navegador. Se exporta la promesa para que main.tsx espere a que el
+// adaptador esté instalado ANTES de montar la app; si no, la primera
+// petición (validar sesión) saldría a la red real y cerraría la sesión.
+export const adaptadorListo: Promise<void> = ES_DEMO
+  ? import('./demo').then(({ adaptadorDemo }) => {
+      api.defaults.adapter = adaptadorDemo
+    })
+  : Promise.resolve()
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)

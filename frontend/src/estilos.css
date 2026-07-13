@@ -343,6 +343,17 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 
 .gestion-cabecera { display: flex; justify-content: space-between; gap: 10px; }
 .gestion-tipo { font-weight: 700; font-size: 13.5px; color: var(--acento); }
+.gestion-usuario {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  padding: 1px 7px;
+  margin-right: 8px;
+  font-size: 12px;
+}
 
 .proximo-aviso {
   margin-top: 8px;

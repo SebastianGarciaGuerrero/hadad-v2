@@ -165,7 +165,12 @@ export default function CobranzaDetalle() {
               <li key={g.id} className={esDestacada(g.tipo_id) ? 'gestion-destacada' : ''}>
                 <div className="gestion-cabecera">
                   <span className="gestion-tipo">{nombreTipo(g.tipo_id)}</span>
-                  <span className="suave">{fechaHoraLegible(g.fecha_gestion)}</span>
+                  <span className="suave">
+                    {g.usuario_nombre && (
+                      <span className="gestion-usuario">{g.usuario_nombre}</span>
+                    )}
+                    {fechaHoraLegible(g.fecha_gestion)}
+                  </span>
                 </div>
                 <p>{g.descripcion}</p>
                 {g.fecha_proximo_contacto && (

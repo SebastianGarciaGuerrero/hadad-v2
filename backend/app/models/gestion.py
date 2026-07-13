@@ -66,8 +66,14 @@ class Gestion(Base):
 
     # Relaciones de navegación.
     tipo = relationship("TipoGestion")
+    usuario = relationship("Usuario")
     # cobranza.gestiones devuelve el historial completo de esa cobranza.
     cobranza = relationship("Cobranza", backref="gestiones")
+
+    @property
+    def usuario_nombre(self):
+        """Nombre de quien registró la gestión (para mostrar en el historial)."""
+        return self.usuario.nombre if self.usuario else None
 
     def __repr__(self):
         return f"<Gestion(cobranza_id={self.cobranza_id}, fecha={self.fecha_gestion})>"

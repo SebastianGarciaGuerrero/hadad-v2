@@ -321,6 +321,10 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     const lista = db.gestiones
       .filter((g) => !params.cobranza_id || g.cobranza_id === params.cobranza_id)
       .sort((a, b) => b.fecha_gestion.localeCompare(a.fecha_gestion))
+      .map((g) => ({
+        ...g,
+        usuario_nombre: db.usuarios.find((u) => u.id === g.usuario_id)?.nombre ?? null,
+      }))
     return ok(config, lista)
   }
   if (metodo === 'POST' && url === '/gestiones/') {
