@@ -7,6 +7,14 @@ export interface Usuario {
   email: string
   rol_id: number
   activo: boolean
+  ultimo_acceso?: string | null
+  created_at?: string
+}
+
+export interface Rol {
+  id: number
+  nombre: string
+  descripcion: string | null
 }
 
 export interface Cliente {

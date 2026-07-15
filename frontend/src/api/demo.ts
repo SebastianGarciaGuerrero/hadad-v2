@@ -30,6 +30,20 @@ function clp(v: number): string {
   return '$' + Math.round(v).toLocaleString('es-CL')
 }
 
+// Catálogo fijo de roles (no cambia; no se guarda en localStorage).
+const ROLES = [
+  { id: 1, nombre: 'admin', descripcion: 'Acceso total y gestión de usuarios' },
+  { id: 2, nombre: 'supervisor', descripcion: 'Ve todo, genera informes' },
+  { id: 3, nombre: 'operador', descripcion: 'Gestiona sus cobranzas' },
+  { id: 4, nombre: 'viewer', descripcion: 'Solo lectura' },
+]
+
+// Quita la contraseña antes de devolver un usuario (nunca se expone).
+function sinPassword<T extends { password?: string }>(u: T) {
+  const { password: _p, ...seguro } = u
+  return seguro
+}
+
 function sumarMeses(fechaISO: string, meses: number): string {
   const [a, m, d] = fechaISO.split('-').map(Number)
   const totalMeses = (m - 1) + meses
@@ -226,6 +240,7 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     const { username, password } = cuerpo(config) as { username: string; password: string }
     const u = db.usuarios.find((x) => x.email === username && x.password === password)
     if (!u) return error(401, 'Email o contraseña incorrectos')
+    if (!u.activo) return error(403, 'Usuario inactivo')
     return ok(config, { access_token: `demo-token-${u.id}`, token_type: 'bearer' })
   }
   if (metodo === 'GET' && url === '/auth/me') {
@@ -241,6 +256,54 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     return ok(config, lista)
   }
   if (metodo === 'GET' && url === '/gestiones/tipos') return ok(config, db.tiposGestion)
+
+  // ---- usuarios (solo admin) ----
+  if (metodo === 'GET' && url === '/usuarios/roles') return ok(config, ROLES)
+  if (metodo === 'GET' && url === '/usuarios/') {
+    return ok(config, db.usuarios.map(sinPassword).sort((a, b) => a.nombre.localeCompare(b.nombre)))
+  }
+  if (metodo === 'POST' && url === '/usuarios/') {
+    const datos = cuerpo(config) as { nombre: string; email: string; password: string; rol_id: number }
+    if (db.usuarios.some((u) => u.email === datos.email)) {
+      return error(400, 'Email ya registrado')
+    }
+    const nuevo = {
+      id: uid(), nombre: datos.nombre, email: datos.email,
+      password: datos.password, rol_id: Number(datos.rol_id), activo: true,
+    }
+    db.usuarios.push(nuevo)
+    guardarDB(db)
+    return ok(config, sinPassword(nuevo), 201)
+  }
+  if (metodo === 'PUT' && /^\/usuarios\/[^/]+\/password$/.test(url)) {
+    const id = url.split('/')[2]
+    const u = db.usuarios.find((x) => x.id === id)
+    if (!u) return error(404, 'Usuario no encontrado')
+    u.password = (cuerpo(config) as { password_nueva: string }).password_nueva
+    guardarDB(db)
+    return ok(config, null, 204)
+  }
+  if (metodo === 'PUT' && /^\/usuarios\/[^/]+$/.test(url)) {
+    const id = url.split('/')[2]
+    const u = db.usuarios.find((x) => x.id === id)
+    if (!u) return error(404, 'Usuario no encontrado')
+    const datos = cuerpo(config) as Partial<{ nombre: string; email: string; rol_id: number; activo: boolean }>
+    const yo = usuarioDelToken(config, db)
+    if (u.id === yo.id && datos.activo === false) {
+      return error(400, 'No puedes desactivar tu propia cuenta.')
+    }
+    if (datos.email && db.usuarios.some((x) => x.email === datos.email && x.id !== id)) {
+      return error(400, 'Email ya registrado')
+    }
+    Object.assign(u, {
+      nombre: datos.nombre ?? u.nombre,
+      email: datos.email ?? u.email,
+      rol_id: datos.rol_id != null ? Number(datos.rol_id) : u.rol_id,
+      activo: datos.activo ?? u.activo,
+    })
+    guardarDB(db)
+    return ok(config, sinPassword(u))
+  }
 
   // ---- deudores ----
   if (metodo === 'GET' && url === '/deudores/buscar') {

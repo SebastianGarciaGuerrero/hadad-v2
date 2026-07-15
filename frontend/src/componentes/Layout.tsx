@@ -36,6 +36,13 @@ export default function Layout() {
           {usuario.rol_id === 1 && (
             <NavLink to="/equipo">Equipo</NavLink>
           )}
+
+          {usuario.rol_id === 1 && (
+            <>
+              <div className="menu-grupo">Administración</div>
+              <NavLink to="/usuarios">Usuarios</NavLink>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-pie">

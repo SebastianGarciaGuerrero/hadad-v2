@@ -7,6 +7,7 @@ import CobranzaDetalle from './paginas/CobranzaDetalle'
 import Deudores from './paginas/Deudores'
 import Informes from './paginas/Informes'
 import Equipo from './paginas/Equipo'
+import Usuarios from './paginas/Usuarios'
 import NuevaCobranzaPagina from './paginas/NuevaCobranzaPagina'
 import Abonos from './paginas/Abonos'
 import CargaMasiva from './paginas/CargaMasiva'
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/deudores" element={<Deudores />} />
             <Route path="/informes" element={<Informes />} />
             <Route path="/equipo" element={<Equipo />} />
+            <Route path="/usuarios" element={<Usuarios />} />
           </Route>
         </Routes>
       </BrowserRouter>
