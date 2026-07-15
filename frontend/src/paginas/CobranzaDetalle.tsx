@@ -167,7 +167,10 @@ export default function CobranzaDetalle() {
                   <span className="gestion-tipo">{nombreTipo(g.tipo_id)}</span>
                   <span className="suave">
                     {g.usuario_nombre && (
-                      <span className="gestion-usuario">{g.usuario_nombre}</span>
+                      <span className="gestion-usuario">
+                        {g.usuario_nombre}
+                        {g.es_masivo && <span className="tag-masivo">masivo</span>}
+                      </span>
                     )}
                     {fechaHoraLegible(g.fecha_gestion)}
                   </span>

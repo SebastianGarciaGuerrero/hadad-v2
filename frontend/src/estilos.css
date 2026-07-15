@@ -354,6 +354,29 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   margin-right: 8px;
   font-size: 12px;
 }
+.tag-masivo {
+  margin-left: 6px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--acento);
+  background: var(--borde);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+/* ---------- Pestañas (carga masiva) ---------- */
+.pestanas { display: flex; gap: 6px; margin-bottom: 18px; border-bottom: 1px solid var(--borde); }
+.pestana {
+  font: inherit; font-weight: 600; cursor: pointer;
+  background: none; border: none; color: var(--texto-suave);
+  padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.pestana:hover { color: var(--texto); }
+.pestana.activa { color: var(--acento); border-bottom-color: var(--acento); }
+
+.btn-deshabilitado { opacity: 0.5; cursor: not-allowed; }
 
 .proximo-aviso {
   margin-top: 8px;

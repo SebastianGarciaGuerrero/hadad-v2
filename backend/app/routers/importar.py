@@ -1,24 +1,27 @@
 """
 Carga masiva desde Excel.
 
-  GET  /api/importar/plantilla → descarga la plantilla .xlsx con las columnas
-       esperadas y una fila de ejemplo.
-  POST /api/importar/cobranzas → sube el Excel lleno y crea, por cada fila,
-       el deudor (si no existe, por RUT) y su cobranza. Devuelve el resumen:
-       cuántas se crearon y qué filas fallaron y por qué.
+  GET  /api/importar/plantilla → plantilla de cobranzas.
+  POST /api/importar/cobranzas → crea deudor (por RUT) + cobranza por fila.
+  GET  /api/importar/plantilla-gestiones → plantilla de gestiones.
+  POST /api/importar/gestiones → registra gestiones en bloque sobre cobranzas
+       existentes de un cliente (identificadas por su ID cliente).
 
 Reglas:
   - El CLIENTE debe existir previamente (se busca por nombre de fantasía o
     razón social). La filial se busca dentro del cliente (opcional).
   - El deudor se busca por RUT: si ya existe se reutiliza (no se duplica).
   - Cada fila es independiente: las filas buenas entran aunque otras fallen.
+  - Las gestiones cargadas en bloque quedan marcadas es_masivo=True y se
+    atribuyen a la persona indicada en la fila (debe ser un usuario).
 """
 
 from io import BytesIO
+from uuid import UUID
 from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -31,6 +34,8 @@ from app.models.cliente import Cliente
 from app.models.filial import Filial
 from app.models.deudor import Deudor, ContactoDeudor
 from app.models.cobranza import Cobranza
+from app.models.gestion import Gestion
+from app.models.usuario import Usuario
 
 
 router = APIRouter(
@@ -236,5 +241,154 @@ async def importar_cobranzas(
         filas_procesadas=filas,
         cobranzas_creadas=creadas,
         deudores_nuevos=deudores_nuevos,
+        errores=errores,
+    )
+
+
+# ============================================================
+# Carga masiva de GESTIONES
+# ============================================================
+
+COLUMNAS_GESTION = [
+    "ID cliente*", "Fecha (AAAA-MM-DD)", "Gestión*", "Persona*",
+]
+
+EJEMPLO_GESTION = [
+    "155001", "2026-07-01", "Llamada al deudor, se compromete a pagar el día 5.", "GRV",
+]
+
+
+@router.get("/plantilla-gestiones")
+def descargar_plantilla_gestiones():
+    """Plantilla Excel para cargar gestiones en bloque sobre un cliente."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Gestiones"
+    fill = PatternFill(start_color="3F3F46", end_color="3F3F46", fill_type="solid")
+    for col, titulo in enumerate(COLUMNAS_GESTION, start=1):
+        celda = ws.cell(row=1, column=col, value=titulo)
+        celda.font = Font(bold=True, color="FFFFFF")
+        celda.fill = fill
+    for col, valor in enumerate(EJEMPLO_GESTION, start=1):
+        ws.cell(row=2, column=col, value=valor)
+    for col, ancho in enumerate([16, 20, 60, 16], start=1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = ancho
+    ws.freeze_panes = "A2"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": 'attachment; filename="plantilla_carga_gestiones.xlsx"'},
+    )
+
+
+class ResultadoGestiones(BaseModel):
+    filas_procesadas: int
+    gestiones_creadas: int
+    errores: list  # [{fila, error}]
+
+
+@router.post("/gestiones", response_model=ResultadoGestiones)
+async def importar_gestiones(
+    cliente_id: UUID = Form(..., description="Cliente al que pertenecen los ID de la planilla"),
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Registra gestiones en bloque sobre cobranzas existentes del cliente
+    indicado. Cada fila trae el ID cliente de la cobranza, la fecha, el texto
+    de la gestión y la persona que la realizó (debe ser un usuario). Las
+    gestiones quedan marcadas como masivas (es_masivo=True).
+    """
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if cliente is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El cliente indicado no existe.",
+        )
+    if not archivo.filename.lower().endswith(".xlsx"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo debe ser un Excel .xlsx (usa la plantilla).",
+        )
+
+    contenido = await archivo.read()
+    try:
+        wb = load_workbook(BytesIO(contenido), data_only=True)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo leer el archivo. ¿Es un .xlsx válido?",
+        )
+    ws = wb.active
+
+    creadas = 0
+    errores = []
+    filas = 0
+    # Cache de usuarios (por nombre en minúsculas) para no consultar por fila.
+    usuarios = {u.nombre.lower(): u for u in db.query(Usuario).all()}
+
+    for i, fila in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if fila is None or all(v is None or str(v).strip() == "" for v in fila):
+            continue
+        filas += 1
+        id_cliente = _texto(fila[0])
+        fecha_cruda = fila[1] if len(fila) > 1 else None
+        gestion = _texto(fila[2]) if len(fila) > 2 else ""
+        persona = _texto(fila[3]) if len(fila) > 3 else ""
+
+        try:
+            if not id_cliente:
+                raise ValueError("Falta el ID cliente")
+            if not gestion:
+                raise ValueError("Falta el texto de la gestión")
+            if not persona:
+                raise ValueError("Falta la persona que realizó la gestión")
+
+            cobranza = (
+                db.query(Cobranza)
+                .filter(Cobranza.cliente_id == cliente.id,
+                        Cobranza.id_clinica == id_cliente)
+                .first()
+            )
+            if cobranza is None:
+                raise ValueError(
+                    f"No existe una cobranza con ID cliente '{id_cliente}' en {cliente.razon_social}"
+                )
+
+            usuario = usuarios.get(persona.lower())
+            if usuario is None:
+                raise ValueError(f"La persona '{persona}' no es un usuario del sistema")
+
+            fecha = None
+            if fecha_cruda:
+                if isinstance(fecha_cruda, datetime):
+                    fecha = fecha_cruda
+                elif isinstance(fecha_cruda, date):
+                    fecha = datetime(fecha_cruda.year, fecha_cruda.month, fecha_cruda.day)
+                else:
+                    fecha = datetime.fromisoformat(_texto(fecha_cruda))
+
+            gestion_obj = Gestion(
+                cobranza_id=cobranza.id,
+                usuario_id=usuario.id,
+                descripcion=gestion,
+                es_masivo=True,
+            )
+            if fecha is not None:
+                gestion_obj.fecha_gestion = fecha
+            db.add(gestion_obj)
+            db.commit()
+            creadas += 1
+        except Exception as e:
+            db.rollback()
+            errores.append({"fila": i, "error": str(e)[:200]})
+
+    return ResultadoGestiones(
+        filas_procesadas=filas,
+        gestiones_creadas=creadas,
         errores=errores,
     )

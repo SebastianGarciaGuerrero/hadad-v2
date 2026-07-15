@@ -93,6 +93,7 @@ export interface Gestion {
   cobranza_id: string
   usuario_id: string
   usuario_nombre: string | null
+  es_masivo: boolean
   tipo_id: number | null
   descripcion: string
   fecha_gestion: string

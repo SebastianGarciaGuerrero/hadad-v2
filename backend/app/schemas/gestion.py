@@ -44,6 +44,7 @@ class GestionResponse(GestionBase):
     id: UUID
     usuario_id: UUID  # quién la registró (vino del token al crearla)
     usuario_nombre: Optional[str] = None  # nombre legible (ej. "GRV")
+    es_masivo: bool = False  # True si vino de una carga masiva de gestiones
     fecha_gestion: datetime
     created_at: datetime
 

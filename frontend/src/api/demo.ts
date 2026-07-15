@@ -386,6 +386,7 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
       .sort((a, b) => b.fecha_gestion.localeCompare(a.fecha_gestion))
       .map((g) => ({
         ...g,
+        es_masivo: (g as { es_masivo?: boolean }).es_masivo ?? false,
         usuario_nombre: db.usuarios.find((u) => u.id === g.usuario_id)?.nombre ?? null,
       }))
     return ok(config, lista)

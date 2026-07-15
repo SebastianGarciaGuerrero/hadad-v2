@@ -331,6 +331,7 @@ CREATE TABLE gestiones (
     tipo_id                INTEGER      REFERENCES tipos_gestion(id),
     descripcion            TEXT         NOT NULL,
     fecha_proximo_contacto DATE,
+    es_masivo              BOOLEAN      NOT NULL DEFAULT FALSE,  -- cargada en bloque
     created_at             TIMESTAMPTZ  DEFAULT NOW()
     -- SIN updated_at → INMUTABLE por diseño
 );

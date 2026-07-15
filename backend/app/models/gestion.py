@@ -61,6 +61,9 @@ class Gestion(Base):
     tipo_id = Column(Integer, ForeignKey("tipos_gestion.id"))
     descripcion = Column(Text, nullable=False)
     fecha_proximo_contacto = Column(Date)
+    # Marca las gestiones cargadas en bloque (carga masiva de gestiones), para
+    # distinguirlas de las registradas una a una. Se muestra como "(masivo)".
+    es_masivo = Column(Boolean, nullable=False, server_default=text("false"))
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("NOW()"))
     # SIN updated_at → INMUTABLE
 
