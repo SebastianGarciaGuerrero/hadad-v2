@@ -9,7 +9,7 @@ Endpoints:
 *** Los pagos son INMUTABLES: no hay PUT ni DELETE. ***
 
 CASCADA al registrar un pago (todo en UNA transacción):
-  1. Se descuenta el monto de cobranzas.monto_actual (sin bajar de 0).
+  1. Se descuenta SOLO el capital de cobranzas.monto_actual (sin bajar de 0).
   2. Si el pago es de una cuota → se suma a cuotas.monto_pagado y se recalcula
      su estado (pagada / pagada_parcial).
   3. Si con eso TODAS las cuotas del acuerdo quedan pagadas → el acuerdo pasa
@@ -143,11 +143,10 @@ def registrar_pago(
     capital = Decimal(pago_data.capital_clinica)
 
     # 1. Descontar del saldo de la cobranza (sin bajar de 0).
-    # REGLA: si el pago viene con desglose, SOLO el capital descuenta el
-    # saldo (el capital es la guía; honorarios/interés/gastos varían con la
-    # UF del día). Sin desglose, descuenta el monto total.
-    descuento = capital if capital > 0 else monto
-    saldo = Decimal(cobranza.monto_actual) - descuento
+    # REGLA: SOLO el capital descuenta el saldo capital del cliente (que es lo
+    # que muestra la app). Honorarios/interés/gastos varían con la UF del día y
+    # NO descuentan. Si no se ingresa capital, el saldo no se mueve.
+    saldo = Decimal(cobranza.monto_actual) - capital
     cobranza.monto_actual = saldo if saldo > 0 else Decimal("0")
 
     # 2. Si el pago es de una cuota, actualizar su monto_pagado y estado.
@@ -170,21 +169,22 @@ def registrar_pago(
         cobranza.estado = "pagada"
 
     # 5. Dejar rastro en el historial de gestiones (automático).
-    partes = [f"total {_clp(monto)}"]
+    #    Desglose: solo se listan los conceptos con monto; los vacíos se omiten.
+    desglose = []
     if capital > 0:
-        partes.append(f"capital {_clp(capital)}")
+        desglose.append(f"Saldo Capital: {_clp(capital)}")
     if pago_data.honorarios_hadad > 0:
-        partes.append(f"honorarios {_clp(pago_data.honorarios_hadad)}")
+        desglose.append(f"Honorarios: {_clp(pago_data.honorarios_hadad)}")
     if pago_data.interes_clinica > 0:
-        partes.append(f"interés {_clp(pago_data.interes_clinica)}")
+        desglose.append(f"Interés: {_clp(pago_data.interes_clinica)}")
     if pago_data.gastos_judiciales > 0:
-        partes.append(f"gastos judiciales {_clp(pago_data.gastos_judiciales)}")
+        desglose.append(f"Gastos judiciales: {_clp(pago_data.gastos_judiciales)}")
     encabezado = (
-        f"PAGO CUOTA {cuota.numero_cuota}" if cuota is not None else "ABONO"
+        f"Pago cuota {cuota.numero_cuota} — " if cuota is not None else "Se realizó abono de "
     )
     _gestion_automatica(
         db, cobranza.id, usuario.id, "Abono",
-        f"{encabezado}: {', '.join(partes)}. "
+        f"{encabezado}{' · '.join(desglose) or 'sin desglose'}. "
         f"Saldo capital restante: {_clp(cobranza.monto_actual)}."
     )
     if cobranza.estado == "pagada":

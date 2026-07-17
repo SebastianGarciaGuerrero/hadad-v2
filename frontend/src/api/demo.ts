@@ -554,18 +554,19 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     }
     db.pagos.push(nuevo as never)
 
-    // Solo el capital descuenta el saldo.
-    const descuento = capital > 0 ? capital : monto
-    cob.monto_actual = String(Math.max(0, Number(cob.monto_actual) - descuento))
+    // SOLO el capital descuenta el saldo. Honorarios, interés y gastos varían
+    // con la UF del día y NO bajan el saldo capital del cliente (que es lo que
+    // muestra la app). Si no se ingresa capital, el saldo no se mueve.
+    cob.monto_actual = String(Math.max(0, Number(cob.monto_actual) - capital))
 
-    let encabezado = 'ABONO'
+    let numeroCuota: number | null = null
     if (nuevo.cuota_id) {
       const acuerdo = db.acuerdos.find((a) => a.cuotas.some((c) => c.id === nuevo.cuota_id))
       const cuota = acuerdo?.cuotas.find((c) => c.id === nuevo.cuota_id)
       if (acuerdo && cuota) {
         cuota.monto_pagado = String(Number(cuota.monto_pagado) + monto)
         cuota.estado = Number(cuota.monto_pagado) >= Number(cuota.monto) ? 'pagada' : 'pagada_parcial'
-        encabezado = `PAGO CUOTA ${cuota.numero_cuota}`
+        numeroCuota = cuota.numero_cuota
         if (acuerdo.cuotas.every((c) => c.estado === 'pagada')) {
           acuerdo.estado = 'cumplido'
           cob.estado = 'pagada'
@@ -574,11 +575,15 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     }
     if (Number(cob.monto_actual) === 0) cob.estado = 'pagada'
 
-    const partes = [`total ${clp(monto)}`]
-    if (capital > 0) partes.push(`capital ${clp(capital)}`)
-    if (Number(nuevo.honorarios_hadad) > 0) partes.push(`honorarios ${clp(Number(nuevo.honorarios_hadad))}`)
+    // Desglose: solo se listan los conceptos con monto; los vacíos se omiten.
+    const desglose: string[] = []
+    if (capital > 0) desglose.push(`Saldo Capital: ${clp(capital)}`)
+    if (Number(nuevo.honorarios_hadad) > 0) desglose.push(`Honorarios: ${clp(Number(nuevo.honorarios_hadad))}`)
+    if (Number(nuevo.interes_clinica) > 0) desglose.push(`Interés: ${clp(Number(nuevo.interes_clinica))}`)
+    if (Number(nuevo.gastos_judiciales) > 0) desglose.push(`Gastos judiciales: ${clp(Number(nuevo.gastos_judiciales))}`)
+    const encabezado = numeroCuota ? `Pago cuota ${numeroCuota} — ` : 'Se realizó abono de '
     gestionAutomatica(db, cob.id, u.id, 'Abono',
-      `${encabezado}: ${partes.join(', ')}. Saldo capital restante: ${clp(Number(cob.monto_actual))}.`)
+      `${encabezado}${desglose.join(' · ') || 'sin desglose'}. Saldo capital restante: ${clp(Number(cob.monto_actual))}.`)
     if (cob.estado === 'pagada') {
       gestionAutomatica(db, cob.id, u.id, 'Pagado', 'CUENTA SALDADA. La cobranza queda en estado pagada.')
     }
