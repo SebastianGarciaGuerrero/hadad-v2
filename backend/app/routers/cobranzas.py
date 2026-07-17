@@ -14,7 +14,7 @@ cambia su 'estado' a 'archivada' o 'castigo' vía PUT.
 
 from uuid import UUID
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy import or_, cast, String
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -42,6 +42,7 @@ router = APIRouter(
 
 @router.get("/", response_model=List[CobranzaResponse])
 def listar_cobranzas(
+    response: Response,
     skip: int = 0,
     limit: int = 100,
     cliente_id: Optional[UUID] = None,
@@ -54,6 +55,9 @@ def listar_cobranzas(
     Lista cobranzas con paginación y filtros opcionales.
     Los filtros se combinan (AND): pasar cliente_id + estado devuelve
     las cobranzas de ese cliente en ese estado.
+
+    El total de resultados (sin paginar) va en el header X-Total-Count, para
+    que el frontend pueda mostrar "página X de Y".
     """
     query = db.query(Cobranza)
 
@@ -66,6 +70,7 @@ def listar_cobranzas(
     if estado is not None:
         query = query.filter(Cobranza.estado == estado)
 
+    response.headers["X-Total-Count"] = str(query.count())
     return query.order_by(Cobranza.numero).offset(skip).limit(limit).all()
 
 

@@ -13,17 +13,16 @@ export default function Deudores() {
   const [busqueda, setBusqueda] = useState('')
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
 
+  // Búsqueda-primero: con 30.000+ deudores no listamos todo. La consulta solo
+  // corre cuando hay texto (RUT o nombre); sin texto se muestra un aviso.
+  const hayBusqueda = busqueda.trim().length >= 1
   const { data: deudores, isLoading } = useQuery({
     queryKey: ['deudores', busqueda],
-    queryFn: async () => {
-      if (busqueda.trim()) {
-        const { data } = await api.get<Deudor[]>('/deudores/buscar', {
-          params: { q: busqueda.trim() },
-        })
-        return data
-      }
-      return (await api.get<Deudor[]>('/deudores/')).data
-    },
+    enabled: hayBusqueda,
+    queryFn: async () =>
+      (await api.get<Deudor[]>('/deudores/buscar', {
+        params: { q: busqueda.trim() },
+      })).data,
   })
 
   const { data: detalle } = useQuery({
@@ -54,7 +53,11 @@ export default function Deudores() {
 
       <div className="ficha-grilla">
         <div>
-          {isLoading ? (
+          {!hayBusqueda ? (
+            <div className="vacio-busqueda">
+              Escribe un RUT o nombre para buscar un deudor.
+            </div>
+          ) : isLoading ? (
             <div className="pantalla-carga">Cargando…</div>
           ) : (
             <table className="tabla">

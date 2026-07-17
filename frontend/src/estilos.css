@@ -204,6 +204,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .btn-primario { background: var(--acento); color: #fff; }
@@ -378,6 +379,23 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 
 .btn-deshabilitado { opacity: 0.5; cursor: not-allowed; }
 
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.paginacion .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.vacio-busqueda {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--texto-suave);
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+}
+
 .proximo-aviso {
   margin-top: 8px;
   font-size: 13px;
@@ -403,6 +421,14 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-w
 /* ---------- Acciones de la ficha ---------- */
 
 .separado { margin-top: 24px; }
+
+/* Título de paso en las cargas masivas: separador claro entre pasos.
+   Selector con .tarjeta para ganarle a `.tarjeta h2 { margin: 0 }`. */
+.tarjeta .paso-titulo {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--borde);
+}
 
 .acciones { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
 .acciones .btn { text-align: left; }

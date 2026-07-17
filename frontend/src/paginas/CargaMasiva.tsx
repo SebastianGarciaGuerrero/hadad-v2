@@ -15,7 +15,7 @@ export default function CargaMasiva() {
   return (
     <>
       <header className="pagina-cabecera">
-        <h1>Carga masiva</h1>
+        <h1>Cargas masivas</h1>
       </header>
 
       <div className="pestanas">
@@ -98,7 +98,7 @@ function CargaCobranzas() {
           Descargar Excel de formato
         </button>
 
-        <h2 className="separado">Paso 2 · Subir el archivo lleno</h2>
+        <h2 className="paso-titulo">Paso 2 · Subir el archivo lleno</h2>
         <p className="suave">
           Las filas correctas se ingresan aunque otras tengan errores; abajo
           verás el detalle de las que fallaron para corregirlas y resubirlas.
@@ -189,7 +189,7 @@ function CargaGestiones() {
           </select>
         </label>
 
-        <h2 className="separado">Paso 2 · Descargar formato</h2>
+        <h2 className="paso-titulo">Paso 2 · Descargar formato</h2>
         <p className="suave">
           Una fila por gestión: ID cliente de la cobranza, fecha, el texto y la
           persona que la hizo.
@@ -198,7 +198,7 @@ function CargaGestiones() {
           Descargar Excel de formato
         </button>
 
-        <h2 className="separado">Paso 3 · Subir el archivo lleno</h2>
+        <h2 className="paso-titulo">Paso 3 · Subir el archivo lleno</h2>
         <p className="suave">
           Las gestiones quedan registradas en el historial de cada cobranza,
           marcadas como <strong>masivo</strong> junto al nombre de la persona.

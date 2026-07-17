@@ -269,8 +269,8 @@ function guardarDB(db: DB) {
 
 // ---------- helpers de respuesta ----------
 
-function ok(config: InternalAxiosRequestConfig, data: unknown, status = 200): AxiosResponse {
-  return { data, status, statusText: 'OK', headers: {}, config }
+function ok(config: InternalAxiosRequestConfig, data: unknown, status = 200, headers: Record<string, string> = {}): AxiosResponse {
+  return { data, status, statusText: 'OK', headers, config }
 }
 
 function error(status: number, detail: string) {
@@ -428,7 +428,10 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     let lista = db.cobranzas
     if (params.estado) lista = lista.filter((c) => c.estado === params.estado)
     if (params.cliente_id) lista = lista.filter((c) => c.cliente_id === params.cliente_id)
-    return ok(config, lista)
+    const skip = Number(params.skip) || 0
+    const limit = Number(params.limit) || 100
+    const pagina = lista.slice(skip, skip + limit)
+    return ok(config, pagina, 200, { 'x-total-count': String(lista.length) })
   }
   if (metodo === 'GET' && /^\/cobranzas\/[^/]+$/.test(url)) {
     const c = db.cobranzas.find((x) => x.id === url.split('/')[2])
