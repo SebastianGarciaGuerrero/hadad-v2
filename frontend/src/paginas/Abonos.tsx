@@ -131,7 +131,10 @@ export default function Abonos() {
               <>
                 <div className="alerta-exito">{exito}</div>
                 <div className="fila">
-                  <button className="btn btn-primario" onClick={() => setExito('')}>
+                  <Link className="btn btn-primario" to={`/cobranzas/${cob.id}`}>
+                    Ver cobranza →
+                  </Link>
+                  <button className="btn btn-secundario" onClick={() => setExito('')}>
                     Registrar otro abono
                   </button>
                   <button className="btn btn-secundario"

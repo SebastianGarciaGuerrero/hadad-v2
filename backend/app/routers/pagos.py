@@ -180,11 +180,14 @@ def registrar_pago(
     if pago_data.gastos_judiciales > 0:
         desglose.append(f"Gastos judiciales: {_clp(pago_data.gastos_judiciales)}")
     encabezado = (
-        f"Pago cuota {cuota.numero_cuota} — " if cuota is not None else "Se realizó abono de "
+        f"Pago de cuota {cuota.numero_cuota} por un total de {_clp(monto)}"
+        if cuota is not None
+        else f"Se realizó un abono por un total de {_clp(monto)}"
     )
+    detalle = f" Desglose: {' · '.join(desglose)}." if desglose else ""
     _gestion_automatica(
         db, cobranza.id, usuario.id, "Abono",
-        f"{encabezado}{' · '.join(desglose) or 'sin desglose'}. "
+        f"{encabezado}.{detalle} "
         f"Saldo capital restante: {_clp(cobranza.monto_actual)}."
     )
     if cobranza.estado == "pagada":

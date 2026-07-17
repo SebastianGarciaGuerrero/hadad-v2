@@ -581,9 +581,12 @@ export const adaptadorDemo: AxiosAdapter = async (config) => {
     if (Number(nuevo.honorarios_hadad) > 0) desglose.push(`Honorarios: ${clp(Number(nuevo.honorarios_hadad))}`)
     if (Number(nuevo.interes_clinica) > 0) desglose.push(`Interés: ${clp(Number(nuevo.interes_clinica))}`)
     if (Number(nuevo.gastos_judiciales) > 0) desglose.push(`Gastos judiciales: ${clp(Number(nuevo.gastos_judiciales))}`)
-    const encabezado = numeroCuota ? `Pago cuota ${numeroCuota} — ` : 'Se realizó abono de '
+    const encabezado = numeroCuota
+      ? `Pago de cuota ${numeroCuota} por un total de ${clp(monto)}`
+      : `Se realizó un abono por un total de ${clp(monto)}`
+    const detalle = desglose.length ? ` Desglose: ${desglose.join(' · ')}.` : ''
     gestionAutomatica(db, cob.id, u.id, 'Abono',
-      `${encabezado}${desglose.join(' · ') || 'sin desglose'}. Saldo capital restante: ${clp(Number(cob.monto_actual))}.`)
+      `${encabezado}.${detalle} Saldo capital restante: ${clp(Number(cob.monto_actual))}.`)
     if (cob.estado === 'pagada') {
       gestionAutomatica(db, cob.id, u.id, 'Pagado', 'CUENTA SALDADA. La cobranza queda en estado pagada.')
     }
