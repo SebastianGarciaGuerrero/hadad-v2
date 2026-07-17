@@ -17,7 +17,7 @@
 import type { AxiosAdapter, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
 const CLAVE_DB = 'hadad_demo_db'
-const VERSION_SEMILLA = 3
+const VERSION_SEMILLA = 4
 
 // ---------- utilidades ----------
 
@@ -54,6 +54,80 @@ function sumarMeses(fechaISO: string, meses: number): string {
   const dd = String(dia).padStart(2, '0')
   const mm = String(mes).padStart(2, '0')
   return `${anio}-${mm}-${dd}`
+}
+
+// Dígito verificador de un RUT chileno (módulo 11) para que los datos de
+// práctica tengan RUTs con formato válido.
+function digitoVerificadorRut(cuerpo: number): string {
+  let suma = 0
+  let mult = 2
+  for (let n = cuerpo; n > 0; n = Math.floor(n / 10)) {
+    suma += (n % 10) * mult
+    mult = mult === 7 ? 2 : mult + 1
+  }
+  const resto = 11 - (suma % 11)
+  if (resto === 11) return '0'
+  if (resto === 10) return 'K'
+  return String(resto)
+}
+
+function sinAcentos(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+// Genera N deudores + sus cobranzas ficticias en la filial Santiago (id 7)
+// de Redsalud (cl-1). Todo inventado y determinístico (mismo resultado en
+// cada reseed): sirve para poblar la demo sin usar datos reales.
+function generarCasosSantiago(cantidad: number, numeroInicial: number) {
+  const nombres = ['José', 'María', 'Juan', 'Ana', 'Luis', 'Carmen', 'Pedro', 'Rosa', 'Carlos', 'Javiera', 'Diego', 'Fernanda', 'Matías', 'Camila', 'Sebastián', 'Valentina', 'Francisco', 'Antonia', 'Cristóbal', 'Catalina', 'Felipe', 'Isidora', 'Benjamín', 'Martina', 'Vicente']
+  const apellidos = ['González', 'Muñoz', 'Rojas', 'Díaz', 'Pérez', 'Soto', 'Contreras', 'Silva', 'Martínez', 'Sepúlveda', 'Morales', 'Rodríguez', 'López', 'Fuentes', 'Hernández', 'Torres', 'Araya', 'Flores', 'Espinoza', 'Castillo', 'Tapia', 'Reyes', 'Gutiérrez', 'Vergara', 'Cortés']
+  const comunas = ['Santiago', 'Maipú', 'Puente Alto', 'La Florida', 'Las Condes', 'Ñuñoa', 'Providencia', 'San Bernardo', 'Conchalí', 'Recoleta', 'Peñalolén', 'La Pintana', 'Quilicura', 'Renca', 'Estación Central', 'Lo Espejo']
+  const tiposDoc = ['pagare', 'pagare', 'pagare', 'factura', 'letra']
+
+  const deudores = []
+  const cobranzas = []
+
+  for (let i = 0; i < cantidad; i++) {
+    const nombrePila = nombres[i % nombres.length]
+    const ap1 = apellidos[(i * 3) % apellidos.length]
+    const ap2 = apellidos[(i * 7 + 4) % apellidos.length]
+    const cuerpoRut = 9000000 + i * 53171
+    const rut = `${cuerpoRut}-${digitoVerificadorRut(cuerpoRut)}`
+    const comuna = comunas[i % comunas.length]
+    const idDeudor = `d-s${i + 1}`
+    const usuario = sinAcentos(`${nombrePila}.${ap1}${i + 1}`).toLowerCase()
+    const cel = `+56 9 ${String(6000 + i).padStart(4, '0')} ${String(1000 + (i * 37) % 8999).padStart(4, '0')}`
+
+    deudores.push({
+      id: idDeudor, rut, tipo: 'natural', nombre: `${nombrePila} ${ap1} ${ap2}`,
+      comuna, ciudad: 'Santiago', en_dicom: i % 3 === 0,
+      observaciones: null as string | null,
+      contactos: [
+        { id: `ct-s${i + 1}a`, deudor_id: idDeudor, tipo: 'celular', valor: cel, activo: true },
+        { id: `ct-s${i + 1}b`, deudor_id: idDeudor, tipo: 'email', valor: `${usuario}@correo.cl`, activo: true },
+      ],
+    })
+
+    const monto = 150000 + ((i * 17) % 60) * 25000
+    const pagada = i % 6 === 5
+    const tipoDoc = tiposDoc[i % tiposDoc.length]
+    const mm = String((i % 6) + 1).padStart(2, '0')
+    const dd = String((i % 27) + 1).padStart(2, '0')
+
+    cobranzas.push({
+      id: `cob-s${i + 1}`, numero: numeroInicial + i,
+      cliente_id: 'cl-1', filial_id: 7 as number | null, deudor_id: idDeudor,
+      id_clinica: String(360000 + i * 7),
+      monto_original: String(monto), monto_actual: pagada ? '0' : String(monto),
+      tipo_documento: tipoDoc,
+      numero_pagare: tipoDoc === 'pagare' ? `PG-2026-${String(1000 + i)}` : null,
+      estado: pagada ? 'pagada' : 'activa', tipo: 'extrajudicial',
+      fecha_ingreso_hadad: `2026-${mm}-${dd}`,
+      observaciones: null as string | null,
+    })
+  }
+
+  return { deudores, cobranzas }
 }
 
 // ---------- datos de práctica (semilla) ----------
@@ -162,7 +236,14 @@ function semilla() {
       estado_pago: 'cuota', usuario_id: 'u-grv',
     },
   ]
-  return { version: VERSION_SEMILLA, usuarios, clientes, filiales, deudores, cobranzas, tiposGestion, gestiones, acuerdos, pagos, proximoNumero: 20004 }
+
+  // 100 casos ficticios extra en la filial Santiago de Redsalud, para que la
+  // demo tenga volumen realista. Se anexan a los 3 casos guiados de arriba.
+  const casosSantiago = generarCasosSantiago(100, 20004)
+  deudores.push(...(casosSantiago.deudores as never[]))
+  cobranzas.push(...(casosSantiago.cobranzas as never[]))
+
+  return { version: VERSION_SEMILLA, usuarios, clientes, filiales, deudores, cobranzas, tiposGestion, gestiones, acuerdos, pagos, proximoNumero: 20004 + casosSantiago.cobranzas.length }
 }
 
 // ---------- base de datos en localStorage ----------
